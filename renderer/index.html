@@ -34,6 +34,10 @@
     <symbol id="i-warn" viewBox="0 0 16 16"><path d="M8 2l6 11H2z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/><path d="M8 7v3M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
     <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M8 5v3.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
     <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4" cy="4" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="4" cy="12" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="12" cy="6" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M4 5.6V10.4M4 5.6C4 8 12 7.6 12 7.6" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></symbol>
+    <symbol id="i-todo" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M5 8.5l2 2 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-zen" viewBox="0 0 16 16"><path d="M2.5 2.5h4M9.5 2.5h4M2.5 13.5h4M9.5 13.5h4M2.5 2.5v4M2.5 9.5v4M13.5 2.5v4M13.5 9.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-diff" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="#5ad17e" stroke-width="1.6" stroke-linecap="round"/><path d="M3 4.5h4M9 4.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-shortcut" viewBox="0 0 16 16"><rect x="2" y="4" width="6" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="10" y="4" width="4" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="2" y="10" width="4" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="8" y="10" width="6" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/></symbol>
   </defs>
 </svg>
 
@@ -54,6 +58,7 @@
     <button id="btnNew" class="tb" title="New file or example (Ctrl+N)"><svg><use href="#i-plus"/></svg><span>New</span><svg class="chev"><use href="#i-chev"/></svg></button>
     <button id="btnOpen" class="tb icon" title="Open folder"><svg><use href="#i-folder"/></svg></button>
     <button id="btnSave" class="tb icon" title="Save (Ctrl+S)"><svg><use href="#i-save"/></svg></button>
+    <button id="btnQuickOpen" class="tb icon" title="Quick Open (Ctrl+P)"><svg><use href="#i-search"/></svg></button>
   </div>
 
   <div class="group runbox">
@@ -64,21 +69,78 @@
   <div class="drag"></div>
 
   <div class="group">
+    <button id="btnZen" class="tb icon" title="Zen mode — focus view (F11)"><svg><use href="#i-zen"/></svg></button>
     <button id="btnPkg" class="tb" title="Install libraries"><svg><use href="#i-box"/></svg><span>Packages</span></button>
     <button id="btnSetup" class="tb" title="Install Python, Java and C/C++ tools"><svg><use href="#i-wrench"/></svg><span>Setup</span></button>
     <button id="btnSettings" class="tb icon" title="Settings"><svg><use href="#i-gear"/></svg></button>
     <button id="btnUpdate" class="tb icon" title="Updates"><svg><use href="#i-update"/></svg><span id="updDot" class="dot hidden"></span></button>
+    <button id="btnHelp" class="tb icon" title="Help &amp; Shortcuts reference (opens in browser)"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M6.3 6.1a1.8 1.8 0 0 1 3.4.9c0 1.2-1.7 1.6-1.7 2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".7" fill="currentColor"/></svg></button>
   </div>
 </header>
 
 <div id="newMenu" class="menu hidden" role="menu"></div>
 
+<!-- Quick Open overlay -->
+<div id="qopen" class="hidden" role="dialog" aria-modal="true">
+  <div id="qopenBox">
+    <div class="qohead">
+      <svg><use href="#i-search"/></svg>
+      <input id="qoInput" placeholder="Type to open a file…" spellcheck="false" autocomplete="off">
+      <kbd>Esc</kbd>
+    </div>
+    <div id="qoList"></div>
+    <div id="qoHint">Start typing to search files in the project</div>
+  </div>
+</div>
+
+<!-- Keyboard shortcuts overlay -->
+<div id="shortcuts" class="hidden" role="dialog" aria-modal="true">
+  <div id="shortcutsBox">
+    <div class="sh-head"><svg><use href="#i-shortcut"/></svg><span>Keyboard Shortcuts</span><button id="shortcutsClose" class="mini"><svg><use href="#i-x"/></svg></button></div>
+    <div class="sh-cols">
+      <div>
+        <h4>Editor</h4>
+        <dl class="keys">
+          <dt><kbd>F5</kbd></dt><dd>Run</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt><dd>Save</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>N</kbd></dt><dd>New file</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>P</kbd></dt><dd>Quick Open</dd>
+          <dt><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Format document</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Find in file</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>H</kbd></dt><dd>Find and replace</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>Go to line</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>Undo</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dt><dd>Redo</dd>
+        </dl>
+      </div>
+      <div>
+        <h4>View</h4>
+        <dl class="keys">
+          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Search in files</dd>
+          <dt><kbd>F11</kbd></dt><dd>Zen mode</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>`</kbd></dt><dd>Show/hide terminal</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>+</kbd>/<kbd>-</kbd></dt><dd>Text size</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>?</kbd></dt><dd>Show shortcuts</dd>
+        </dl>
+        <h4>Multi-cursor</h4>
+        <dl class="keys">
+          <dt><kbd>Alt</kbd>+Click</dt><dd>Add cursor</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Select next match</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></dt><dd>Select all matches</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+↑/↓</dt><dd>Add cursor above/below</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="main">
-  <!-- sidebar tabs -->
+  <!-- sidebar rail -->
   <div id="sideRail">
-    <button id="railExplorer" class="rail on" title="Explorer"><svg><use href="#i-file"/></svg></button>
-    <button id="railSearch" class="rail" title="Search (Ctrl+Shift+F)"><svg><use href="#i-search"/></svg></button>
+    <button id="railExplorer" class="rail on" title="Explorer (files)"><svg><use href="#i-file"/></svg></button>
+    <button id="railSearch" class="rail" title="Find in Files (Ctrl+Shift+F)"><svg><use href="#i-search"/></svg></button>
     <button id="railGit" class="rail" title="Git"><svg><use href="#i-git"/></svg><span id="gitDot" class="dot hidden"></span></button>
+    <button id="railTodo" class="rail" title="TODO / FIXME"><svg><use href="#i-todo"/></svg><span id="todoDot" class="dot hidden"></span></button>
   </div>
 
   <aside id="side">
@@ -111,13 +173,14 @@
       <div class="panehead">
         <span>Git</span>
         <span class="acts">
+          <button id="gitDiffBtn" class="mini" title="Diff selected file"><svg><use href="#i-diff"/></svg></button>
           <button id="gitRefresh" class="mini" title="Refresh"><svg><use href="#i-refresh"/></svg></button>
         </span>
       </div>
       <div id="gitBranch" class="gitbranch"></div>
       <div id="gitFiles"></div>
       <div id="gitActions">
-        <input id="gitMsg" placeholder="Commit message…" spellcheck="false">
+        <input id="gitMsg" placeholder="Commit message (Ctrl+Enter)…" spellcheck="false">
         <div class="git-btn-row">
           <button id="gitStageAll">Stage all</button>
           <button id="gitCommitBtn" class="primary">Commit</button>
@@ -126,32 +189,65 @@
         <div id="gitLog"></div>
       </div>
     </div>
+
+    <!-- TODO panel -->
+    <div id="sideTodo" class="hidden">
+      <div class="panehead">
+        <span>TODO / FIXME</span>
+        <span class="acts">
+          <button id="todoRefresh" class="mini" title="Rescan"><svg><use href="#i-refresh"/></svg></button>
+        </span>
+      </div>
+      <div id="todoResults"></div>
+    </div>
   </aside>
 
   <section id="center">
-    <div id="tabs"></div>
+    <div id="tabbar">
+      <div id="tabs"></div>
+      <div id="breadcrumb"></div>
+    </div>
     <div id="editor">
+      <!-- Welcome screen -->
       <div id="welcome" class="hidden">
         <div class="wcol">
-          <h1>Start coding</h1>
-          <p class="wsub">Choose a language to create a new file. Press <kbd>F5</kbd> to run it.</p>
-          <div class="cards" id="langCards"></div>
+          <div class="wlogo">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#2f6fed"/><rect x="10" y="16" width="44" height="32" rx="5" fill="#14161b"/><path d="M18 26l7 6-7 6" stroke="#5ad17e" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 39h15" stroke="#e8eaee" stroke-width="3.6" stroke-linecap="round"/></svg>
+            <div><h1>CodeBox</h1><p class="wsub">The simple IDE for Python, Java, C and C++</p></div>
+          </div>
+
+          <div class="wactions">
+            <button id="wNewFile" class="wact primary"><svg><use href="#i-plus"/></svg><span>New file</span></button>
+            <button id="wOpenFolder" class="wact"><svg><use href="#i-folder"/></svg><span>Open folder</span></button>
+            <button id="wQuickOpen" class="wact"><svg><use href="#i-search"/></svg><span>Quick Open <kbd>Ctrl+P</kbd></span></button>
+          </div>
+
+          <div class="wrecent" id="wRecentSection">
+            <h3>Recent projects</h3>
+            <div id="wRecentList"></div>
+          </div>
+
+          <div class="wlangs">
+            <h3>Start a new project</h3>
+            <div class="cards" id="langCards"></div>
+          </div>
+
           <div class="wfoot">
             <div>
-              <h3>Shortcuts</h3>
+              <h3>Quick shortcuts</h3>
               <dl class="keys">
                 <dt><kbd>F5</kbd></dt><dd>Run</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt><dd>Save</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>N</kbd></dt><dd>New file</dd>
+                <dt><kbd>Ctrl</kbd>+<kbd>P</kbd></dt><dd>Quick Open</dd>
                 <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Search</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>-</kbd></dt><dd>Text size</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Find in file</dd>
+                <dt><kbd>F11</kbd></dt><dd>Zen mode</dd>
+                <dt><kbd>Ctrl</kbd>+<kbd>?</kbd></dt><dd>All shortcuts</dd>
               </dl>
             </div>
             <div>
               <h3>Tips</h3>
               <p>Programs that ask questions read your answers from the terminal at the bottom.</p>
               <p>Missing Python, Java or a compiler? Open <b>Setup</b> and click Install.</p>
+              <p>Use <b>Alt+Shift+F</b> to auto-format your code instantly.</p>
             </div>
           </div>
         </div>
@@ -178,11 +274,15 @@
   </section>
 </div>
 
+<!-- Zen exit button -->
+<button id="zenExit" class="hidden" title="Exit Zen mode (F11 or Esc)"><svg><use href="#i-zen"/></svg></button>
+
 <footer id="statusbar">
   <span id="sbRun"><span class="sbdot"></span><span id="sbRunText">Ready</span></span>
   <span id="sbBranch" class="hidden"></span>
   <span id="sbFolder" title="Project folder"></span>
   <span class="grow"></span>
+  <span id="sbCount" title="Word and line count"></span>
   <span id="sbPos"></span>
   <span id="sbLang"></span>
   <span>UTF-8</span>
@@ -273,6 +373,7 @@
           <div class="range"><input id="setFont" type="range" min="10" max="26" step="1"><span id="setFontVal"></span></div></div>
         <div class="setting"><div><b>Word wrap</b><small>Wrap long lines instead of scrolling</small></div><label class="switch"><input id="setWrap" type="checkbox"><span></span></label></div>
         <div class="setting"><div><b>Minimap</b><small>Show a small code overview on the right</small></div><label class="switch"><input id="setMinimap" type="checkbox"><span></span></label></div>
+        <div class="setting"><div><b>Format on save</b><small>Auto-format code when you save</small></div><label class="switch"><input id="setFmtSave" type="checkbox"><span></span></label></div>
         <div class="setting"><div><b>Save automatically</b><small>Saves a second after you stop typing</small></div><label class="switch"><input id="setAuto" type="checkbox"><span></span></label></div>
         <div class="setting"><div><b>Check for updates on start</b><small>You choose when to install</small></div><label class="switch"><input id="setUpd" type="checkbox"><span></span></label></div>
         <div class="setting"><div><b>Project folder</b><small id="setWs" class="mono"></small></div><button id="setOpenWs">Show in Explorer</button></div>

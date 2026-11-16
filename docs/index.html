@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeBox for Windows</title>
+<meta name="description" content="CodeBox is a free, easy code editor for Windows. Write and run Python, Java, C and C++ with one key, with a built-in terminal and package manager.">
+<meta name="keywords" content="easy IDE, beginner code editor, Python IDE Windows, Java IDE, C++ IDE, C compiler Windows, free IDE">
+<link rel="canonical" href="https://maxyb0202-max.github.io/codebox/">
+<meta property="og:title" content="CodeBox: easy Python, Java, C and C++ editor for Windows">
+<meta property="og:description" content="Pick a language. Press F5. Free code editor with a built-in terminal and package manager.">
+<meta property="og:url" content="https://maxyb0202-max.github.io/codebox/">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: an exercise-book page with the CodeBox window sitting on it; one wide, heavy headline, everything else quiet. */
+:root {
+  --paper: #f3f6f9;
+  --ink: #0f1c2b;
+  --muted: #566475;
+  --line: #d6dee7;
+  --accent: #0e63c9;
+  --go: #23854a;
+  --card: #ffffff;
+  --win: #1e1f24;
+  --win-2: #2a2c33;
+  --grid: rgba(14, 99, 201, .07);
+  --f-display: "Archivo", "Arial Black", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d141d; --ink: #e8eef5; --muted: #98a6b6; --line: #253244; --accent: #5aa2ff;
+    --go: #3fbf6f; --card: #131c27; --win: #16181d; --win-2: #22252c; --grid: rgba(90, 162, 255, .06);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d141d; --ink: #e8eef5; --muted: #98a6b6; --line: #253244; --accent: #5aa2ff;
+  --go: #3fbf6f; --card: #131c27; --win: #16181d; --win-2: #22252c; --grid: rgba(90, 162, 255, .06);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+body {
+  margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 var(--f-body);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* nav */
+nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; font: 800 20px var(--f-display); font-stretch: 112%; color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+.logo svg { width: 30px; height: 30px; }
+nav ul { list-style: none; display: flex; gap: 24px; margin: 0; padding: 0; flex-wrap: wrap; }
+nav ul a { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px; }
+nav ul a:hover { color: var(--ink); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 48px; align-items: center; padding: 40px 0 72px; }
+h1 {
+  font-family: var(--f-display); font-weight: 900; font-stretch: 125%; line-height: .95; letter-spacing: -.035em;
+  font-size: clamp(42px, 6.2vw, 78px); margin: 0 0 22px; text-wrap: balance;
+}
+h1 .key {
+  display: inline-block; font-stretch: 100%; font-weight: 700; font-size: .62em; letter-spacing: 0; vertical-align: .14em;
+  padding: .06em .34em .1em; border: 2px solid var(--ink); border-bottom-width: 6px; border-radius: .18em; background: var(--card);
+}
+.lede { font-size: 19px; color: var(--muted); max-width: 30em; margin: 0 0 30px; }
+.cta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.btn-dl {
+  display: inline-flex; align-items: center; gap: 12px; padding: 15px 24px 15px 20px; border-radius: 10px;
+  background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 17px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.15), 0 10px 26px -10px var(--accent); transition: transform .15s;
+}
+.btn-dl:hover { transform: translateY(-2px); }
+.btn-dl svg { width: 22px; height: 22px; flex: none; }
+.btn-dl small { display: block; font-weight: 400; opacity: .85; font-size: 13px; }
+.meta { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.meta b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* app window */
+.window { background: var(--win); border-radius: 12px; overflow: hidden; box-shadow: 0 30px 60px -28px rgba(10, 30, 60, .55), 0 0 0 1px rgba(0,0,0,.25); color: #d4d4d4; font: 13px var(--f-mono); }
+.titlebar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--win-2); flex-wrap: wrap; }
+.titlebar .name { font: 700 13px var(--f-body); color: #fff; margin-right: 6px; }
+.langs { display: flex; gap: 4px; flex-wrap: wrap; }
+.langs button {
+  font: 600 12px var(--f-body); color: #c9c9c9; background: #3a3c44; border: 1px solid #4a4c55; border-radius: 6px; padding: 5px 11px; cursor: pointer;
+}
+.langs button[aria-pressed="true"] { background: #0e63c9; border-color: #0e63c9; color: #fff; }
+.run { margin-left: auto; font: 600 12px var(--f-body); color: #fff; background: #2e8b3d; border: 0; border-radius: 6px; padding: 6px 13px; cursor: pointer; }
+.run:hover { background: #37a349; }
+.tabbar { padding: 7px 14px; background: #1a1b20; color: #fff; font-size: 12px; border-bottom: 1px solid #111; }
+pre.code { margin: 0; padding: 14px 0; min-height: 214px; overflow-x: auto; line-height: 1.65; counter-reset: ln; }
+pre.code span.l { display: block; padding: 0 16px 0 0; white-space: pre; }
+pre.code span.l::before { counter-increment: ln; content: counter(ln); display: inline-block; width: 38px; padding-right: 14px; text-align: right; color: #5c606b; }
+.k { color: #569cd6; } .s { color: #ce9178; } .f { color: #dcdcaa; } .c { color: #6a9955; } .n { color: #b5cea8; } .t { color: #4ec9b0; } .p { color: #c586c0; }
+.term { border-top: 5px solid var(--win-2); padding: 10px 14px 14px; min-height: 112px; white-space: pre-wrap; line-height: 1.55; }
+.term .pr { color: #5ec26a; }
+.term .dim { color: #7d818c; }
+.term .in { color: #fff; }
+.caret { display: inline-block; width: 7px; height: 14px; background: #d4d4d4; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* sections */
+section { padding: 64px 0; border-top: 1px solid var(--line); }
+h2 { font: 800 clamp(30px, 3.6vw, 42px)/1.05 var(--f-display); font-stretch: 118%; letter-spacing: -.025em; margin: 0 0 14px; text-wrap: balance; }
+.sub { color: var(--muted); max-width: 40em; margin: 0 0 36px; }
+
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; counter-reset: st; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px 22px 20px; }
+.step::before { counter-increment: st; content: counter(st); display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--ink); color: var(--paper); font: 800 17px var(--f-display); margin-bottom: 14px; }
+.step h3, .feat h3 { margin: 0 0 6px; font: 700 18px var(--f-body); }
+.step p, .feat p { margin: 0; color: var(--muted); font-size: 15.5px; }
+kbd { font: 600 13px var(--f-mono); padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 5px; background: var(--card); color: var(--ink); }
+code { font: 14px var(--f-mono); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+
+.feats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.feat { padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.feat:nth-child(3n) { border-right: 0; }
+.feat:nth-last-child(-n+3) { border-bottom: 0; }
+.feat .tag { display: inline-block; font: 600 11.5px var(--f-mono); color: var(--accent); letter-spacing: .02em; margin-bottom: 8px; }
+
+.pm { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 15.5px; }
+.pm-wrap { overflow-x: auto; }
+.pm th, .pm td { text-align: left; padding: 13px 18px; border-bottom: 1px solid var(--line); }
+.pm th { font: 600 13px var(--f-body); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.pm tr:last-child td { border-bottom: 0; }
+.pm td:first-child { font-weight: 600; white-space: nowrap; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; }
+dl.req { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; }
+dl.req dt { font-weight: 600; }
+dl.req dd { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+details { border-bottom: 1px solid var(--line); padding: 14px 0; }
+details:first-of-type { border-top: 1px solid var(--line); }
+summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 700 20px var(--f-display); color: var(--accent); line-height: 1; }
+details[open] summary::after { content: "\2212"; }
+details p { margin: 10px 0 0; color: var(--muted); font-size: 15.5px; }
+
+.final { text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; background: var(--ink); color: var(--paper); border-radius: 14px; padding: 36px; }
+.final h2 { margin: 0; color: var(--paper); }
+.final p { margin: 6px 0 0; color: color-mix(in srgb, var(--paper) 70%, transparent); }
+footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 16px; }
+  .steps, .two { grid-template-columns: 1fr; }
+  .feats { grid-template-columns: 1fr; }
+  .feat, .feat:nth-child(3n) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .feat:last-child { border-bottom: 0; }
+}
+@media (max-width: 480px) {
+  body { font-size: 16px; }
+  .wrap { padding: 0 16px; }
+  nav ul { gap: 16px; }
+  .final { padding: 26px 22px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav aria-label="Main">
+    <a class="logo" href="#top">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="12" fill="#0e63c9"/><rect x="9" y="15" width="46" height="34" rx="4" fill="#1e1e1e"/><path d="M17 25l8 7-8 7" stroke="#6bcb77" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 40h17" stroke="#e6e6e6" stroke-width="3.6" stroke-linecap="round"/></svg>
+      CodeBox
+    </a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a class="gh-link" href="#">Source code</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero" id="top">
+    <div>
+      <h1>Pick a language. Press <span class="key">F5</span>.</h1>
+      <p class="lede">CodeBox is a free, simple code editor for Windows. Write Python, Java, C or C++, run it with one key, and install libraries without touching the command line.</p>
+      <div class="cta">
+        <a class="btn-dl dl-link" href="#">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5l7.4-1v7.1H3V5.5zm0 13l7.4 1v-7H3v6zm8.3 1.1L21 21v-8.4h-9.7v7zm0-15.2v7.2H21V3l-9.7 1.4z"/></svg>
+          <span>Download for Windows<small>Free &middot; CodeBox-Setup.exe</small></span>
+        </a>
+        <div class="meta">Version <b class="ver">1.1.0</b> &middot; <b>84 MB</b><br>Windows 10 and 11, 64-bit</div>
+      </div>
+    </div>
+
+    <div class="window" role="region" aria-label="CodeBox preview">
+      <div class="titlebar">
+        <span class="name">CodeBox</span>
+        <div class="langs" role="group" aria-label="Language">
+          <button type="button" data-lang="python" aria-pressed="true">Python</button>
+          <button type="button" data-lang="java" aria-pressed="false">Java</button>
+          <button type="button" data-lang="c" aria-pressed="false">C</button>
+          <button type="button" data-lang="cpp" aria-pressed="false">C++</button>
+        </div>
+        <button type="button" class="run" id="run">&#9654; Run</button>
+      </div>
+      <div class="tabbar" id="file">guess.py</div>
+      <pre class="code" id="code"></pre>
+      <div class="term" id="term" aria-live="polite"></div>
+    </div>
+  </header>
+</div>
+
+<div class="wrap">
+  <section id="how">
+    <h2>From download to running code in three steps</h2>
+    <p class="sub">CodeBox installs the compilers for you, so there's nothing to set up by hand.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Install CodeBox</h3>
+        <p>Run <code>CodeBox-Setup.exe</code>. It installs for your user account only, so it doesn't need admin rights.</p>
+      </div>
+      <div class="step">
+        <h3>Click Install everything</h3>
+        <p>The Setup tab finds what's missing (Python, Java JDK 21, gcc/g++) and installs it with Windows' own winget.</p>
+      </div>
+      <div class="step">
+        <h3>Write and press <kbd>F5</kbd></h3>
+        <p>Pick a language, start from an example or a blank file, and run it. Type answers to your program straight into the terminal.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <h2>Everything a first project needs</h2>
+    <p class="sub">The same editor engine as Visual Studio Code, without the setup.</p>
+    <div class="feats">
+      <div class="feat"><span class="tag">EDITOR</span><h3>Real code editor</h3><p>Syntax colours, auto-indent, find and replace, and multiple tabs. Saves as you type.</p></div>
+      <div class="feat"><span class="tag">RUN</span><h3>One-key run</h3><p>Compiles C and C++ automatically and runs Java and Python files directly. Stop a stuck program with one click.</p></div>
+      <div class="feat"><span class="tag">SHELL</span><h3>Built-in terminal</h3><p>A normal Windows command prompt opened in your project folder, with up-arrow history and copy and paste.</p></div>
+      <div class="feat"><span class="tag">PACKAGES</span><h3>Library manager</h3><p>Search and install libraries for each language from one window, no commands to remember.</p></div>
+      <div class="feat"><span class="tag">EXAMPLES</span><h3>Ready-made examples</h3><p>A guessing game, a calculator and times tables in all four languages, ready to run and change.</p></div>
+      <div class="feat"><span class="tag">UPDATE</span><h3>Updates itself</h3><p>New versions download in the background. Press Restart and you're up to date, with no reinstalling.</p></div>
+    </div>
+  </section>
+
+  <section id="packages">
+    <h2>Libraries for every language</h2>
+    <p class="sub">Open <b>Packages</b>, type a name, press Install. CodeBox uses each language's standard library source.</p>
+    <div class="pm-wrap">
+      <table class="pm">
+        <thead><tr><th>Language</th><th>Installs from</th><th>Try</th></tr></thead>
+        <tbody>
+          <tr><td>Python</td><td>pip and PyPI, plus <code>requirements.txt</code></td><td><code>requests</code>, <code>numpy</code></td></tr>
+          <tr><td>Java</td><td>Maven Central; jars go in your project's <code>libs</code> folder</td><td><code>gson</code>, <code>commons-lang3</code></td></tr>
+          <tr><td>C and C++</td><td>Microsoft vcpkg</td><td><code>fmt</code>, <code>nlohmann-json</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="two">
+      <div>
+        <h2>System requirements</h2>
+        <dl class="req">
+          <dt>Windows</dt><dd>10 or 11, 64-bit</dd>
+          <dt>Download</dt><dd>84 MB</dd>
+          <dt>Disk space</dt><dd>About 300 MB, plus the languages you install</dd>
+          <dt>Memory</dt><dd>4 GB RAM or more</dd>
+          <dt>Internet</dt><dd>Needed for setup, libraries and updates</dd>
+        </dl>
+      </div>
+      <div>
+        <h2>Questions</h2>
+        <details>
+          <summary>Windows says it "protected your PC". Is that normal?</summary>
+          <p>Yes. CodeBox is new and isn't code-signed yet, so SmartScreen shows a warning the first time. Click <b>More info</b>, then <b>Run anyway</b>.</p>
+        </details>
+        <details>
+          <summary>Is it really free?</summary>
+          <p>Yes. CodeBox is free and open source under the MIT licence.</p>
+        </details>
+        <details>
+          <summary>Where are my files saved?</summary>
+          <p>In <code>Documents\CodeBox</code> by default. Use <b>Open Folder</b> to work anywhere else.</p>
+        </details>
+        <details>
+          <summary>How do I update?</summary>
+          <p>Open the <b>Update</b> tab and press <b>Check for updates</b>. CodeBox also checks on its own when it starts. A green dot appears when a new version is ready.</p>
+        </details>
+        <details>
+          <summary>How do I uninstall it?</summary>
+          <p>Settings, then Apps, then CodeBox, then Uninstall. Your code in <code>Documents\CodeBox</code> is left alone.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="final">
+      <div>
+        <h2>Start coding in a few minutes</h2>
+        <p>Free for Windows 10 and 11.</p>
+      </div>
+      <a class="btn-dl dl-link" href="#">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5l7.4-1v7.1H3V5.5zm0 13l7.4 1v-7H3v6zm8.3 1.1L21 21v-8.4h-9.7v7zm0-15.2v7.2H21V3l-9.7 1.4z"/></svg>
+        <span>Download CodeBox<small>Version <span class="ver">1.1.0</span></small></span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span>CodeBox &middot; MIT licence</span>
+    <span><a class="gh-link" href="#">Source code and release notes</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // ---- Where the downloads live. Change this one line if the repository moves.
+  var REPO = 'maxyb0202-max/codebox';
+  var VERSION = '1.1.0';
+
+  var gh = 'https://github.com/' + REPO;
+  document.querySelectorAll('.dl-link').forEach(function (a) { a.href = gh + '/releases/latest/download/CodeBox-Setup.exe'; });
+  document.querySelectorAll('.gh-link').forEach(function (a) { a.href = gh; });
+  document.querySelectorAll('.ver').forEach(function (e) { e.textContent = VERSION; });
+
+  var DEMOS = {
+    python: {
+      file: 'guess.py', cmd: 'python guess.py',
+      code: '<span class="k">import</span> random\n\nsecret = random.<span class="f">randint</span>(<span class="n">1</span>, <span class="n">10</span>)\nguess = <span class="f">int</span>(<span class="f">input</span>(<span class="s">"Guess 1-10: "</span>))\n\n<span class="p">if</span> guess == secret:\n    <span class="f">print</span>(<span class="s">"You got it!"</span>)\n<span class="p">else</span>:\n    <span class="f">print</span>(<span class="s">f"Nope, it was </span>{secret}<span class="s">"</span>)',
+      out: [['Guess 1-10: ', ''], ['', '7'], ['You got it!\n', '']]
+    },
+    java: {
+      file: 'Main.java', cmd: 'java Main.java',
+      code: '<span class="k">public class</span> <span class="t">Main</span> {\n    <span class="k">public static void</span> <span class="f">main</span>(<span class="t">String</span>[] args) {\n        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">1</span>; i &lt;= <span class="n">3</span>; i++) {\n            <span class="t">System</span>.out.<span class="f">println</span>(<span class="s">"Hello #"</span> + i);\n        }\n    }\n}',
+      out: [['Hello #1\nHello #2\nHello #3\n', '']]
+    },
+    c: {
+      file: 'hello.c', cmd: 'gcc hello.c -o hello && hello',
+      code: '<span class="p">#include</span> <span class="s">&lt;stdio.h&gt;</span>\n\n<span class="k">int</span> <span class="f">main</span>(<span class="k">void</span>) {\n    <span class="k">int</span> total = <span class="n">0</span>;\n    <span class="p">for</span> (<span class="k">int</span> i = <span class="n">1</span>; i &lt;= <span class="n">100</span>; i++) total += i;\n    <span class="f">printf</span>(<span class="s">"1 + 2 + ... + 100 = %d\\n"</span>, total);\n    <span class="p">return</span> <span class="n">0</span>;\n}',
+      out: [['1 + 2 + ... + 100 = 5050\n', '']]
+    },
+    cpp: {
+      file: 'shopping.cpp', cmd: 'g++ shopping.cpp -o shopping && shopping',
+      code: '<span class="p">#include</span> <span class="s">&lt;iostream&gt;</span>\n<span class="p">#include</span> <span class="s">&lt;vector&gt;</span>\n\n<span class="k">int</span> <span class="f">main</span>() {\n    std::<span class="t">vector</span>&lt;std::<span class="t">string</span>&gt; list{<span class="s">"milk"</span>, <span class="s">"eggs"</span>, <span class="s">"bread"</span>};\n    <span class="p">for</span> (<span class="k">auto</span>&amp; item : list)\n        std::cout &lt;&lt; <span class="s">"- "</span> &lt;&lt; item &lt;&lt; <span class="s">"\\n"</span>;\n}',
+      out: [['- milk\n- eggs\n- bread\n', '']]
+    }
+  };
+
+  var codeEl = document.getElementById('code'), termEl = document.getElementById('term'), fileEl = document.getElementById('file');
+  var cur = 'python', timer = null;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var PROMPT = '<span class="pr">C:\\Users\\you\\Documents\\CodeBox&gt;</span> ';
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function lines(html) { return html.split('\n').map(function (l) { return '<span class="l">' + (l || ' ') + '</span>'; }).join(''); }
+
+  function finalOutput(d) {
+    return d.out.map(function (o) { return esc(o[0]) + (o[1] ? '<span class="in">' + esc(o[1]) + '</span>\n' : ''); }).join('');
+  }
+  function rest(d) {
+    return '<span class="dim">' + esc(d.cmd) + '</span>\n' + finalOutput(d) + PROMPT + '<span class="caret"></span>';
+  }
+
+  function show(lang, animate) {
+    cur = lang;
+    var d = DEMOS[lang];
+    document.querySelectorAll('.langs button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.lang === lang)); });
+    fileEl.textContent = d.file;
+    codeEl.innerHTML = lines(d.code);
+    if (animate) play(); else termEl.innerHTML = rest(d);
+  }
+
+  function play() {
+    clearTimeout(timer);
+    var d = DEMOS[cur];
+    if (reduce) { termEl.innerHTML = rest(d); return; }
+    var html = '<span class="dim">' + esc(d.cmd) + '</span>\n';
+    termEl.innerHTML = html + '<span class="caret"></span>';
+    var parts = [];
+    d.out.forEach(function (o) {
+      if (o[0]) parts.push({ t: o[0], cls: '', speed: 14 });
+      if (o[1]) parts.push({ t: o[1] + '\n', cls: 'in', speed: 160, pause: 500 });
+    });
+    var pi = 0, ci = 0, built = html;
+    function step() {
+      if (pi >= parts.length) { termEl.innerHTML = built + PROMPT + '<span class="caret"></span>'; return; }
+      var p = parts[pi];
+      if (ci === 0 && p.pause) { var hold = p.pause; p.pause = 0; timer = setTimeout(step, hold); return; }
+      var ch = esc(p.t[ci]);
+      built += p.cls ? '<span class="' + p.cls + '">' + ch + '</span>' : ch;
+      ci++;
+      if (ci >= p.t.length) { pi++; ci = 0; }
+      termEl.innerHTML = built + '<span class="caret"></span>';
+      timer = setTimeout(step, p.speed);
+    }
+    timer = setTimeout(step, 450);
+  }
+
+  document.querySelectorAll('.langs button').forEach(function (b) {
+    b.addEventListener('click', function () { show(b.dataset.lang, true); });
+  });
+  document.getElementById('run').addEventListener('click', play);
+  show('python', false);
+})();
+</script>
+</body>
+</html>

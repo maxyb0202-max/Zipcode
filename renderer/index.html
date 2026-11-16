@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CodeBox</title>
+<link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="toolbar">
+  <span class="brand">CodeBox</span>
+  <select id="lang" title="Language for new files">
+    <option value="python">Python</option>
+    <option value="java">Java</option>
+    <option value="c">C</option>
+    <option value="cpp">C++</option>
+  </select>
+  <button id="btnNew" title="New file (Ctrl+N)">+ New</button>
+  <select id="examples" title="Open a ready-made example program"><option value="">Examples...</option></select>
+  <button id="btnOpen" title="Open a different project folder">Open Folder</button>
+  <button id="btnSave" title="Save (Ctrl+S)">Save</button>
+  <button id="btnRun" class="run" title="Run (F5)">&#9654; Run</button>
+  <button id="btnStop" class="stop" title="Stop the running program">&#9632; Stop</button>
+  <span class="grow"></span>
+  <span id="status"></span>
+  <button id="btnPkg" title="Install libraries for the current language">Packages</button>
+  <button id="btnSetup" title="Install Python, Java and C/C++ compilers">Setup</button>
+  <button id="btnSettings" title="Settings">Settings</button>
+  <button id="btnUpdate" title="Check for CodeBox updates">Update<span id="updDot" class="dot hidden"></span></button>
+</div>
+
+<div id="main">
+  <div id="side">
+    <div id="wsname"></div>
+    <div id="tree"></div>
+  </div>
+  <div id="center">
+    <div id="tabs"></div>
+    <div id="editor">
+      <div id="welcome" class="hidden">
+        <h2>Welcome to CodeBox</h2>
+        <p>Pick a language at the top, then press <b>+ New</b> or choose one of the <b>Examples</b>.</p>
+        <p>Press <b>F5</b> to run your program. Its output appears in the terminal below, and you can type answers there too.</p>
+      </div>
+    </div>
+    <div id="splitter"></div>
+    <div id="termwrap"><div id="term"></div></div>
+  </div>
+</div>
+<div id="statusbar"><span id="sbLang"></span><span id="sbPos"></span><span class="grow"></span><span id="sbVer"></span></div>
+
+<div id="overlay" class="hidden">
+  <div id="dlg">
+    <div id="dlgHead">
+      <div id="dlgTabs">
+        <button data-pane="python">Python</button>
+        <button data-pane="java">Java</button>
+        <button data-pane="cpp">C / C++</button>
+        <button data-pane="setup">Setup</button>
+        <button data-pane="settings">Settings</button>
+        <button data-pane="update">Update</button>
+      </div>
+      <button id="dlgClose">&#10005;</button>
+    </div>
+
+    <div class="pane" id="pane-python">
+      <p class="hint">Installs Python libraries with pip. Type one or more names, e.g. <code>requests</code> or <code>numpy pandas</code>.</p>
+      <div class="line">
+        <input id="pyName" placeholder="package name">
+        <button id="pyInstall" class="primary">Install</button>
+        <button id="pyRemove">Uninstall</button>
+        <button id="pyList">Show installed</button>
+        <button id="pyReq">Install requirements.txt</button>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-java">
+      <p class="hint">Searches Maven Central and downloads the .jar (plus its dependencies) into your project's <code>libs</code> folder. Run picks them up automatically. You can also type <code>group:artifact:version</code>.</p>
+      <div class="line">
+        <input id="jvName" placeholder="e.g. gson">
+        <button id="jvSearch" class="primary">Search</button>
+      </div>
+      <div class="cols">
+        <div><h4>Results</h4><div id="jvResults" class="list"></div></div>
+        <div><h4>Installed in libs</h4><div id="jvInstalled" class="list"></div></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-cpp">
+      <p class="hint">Uses vcpkg for C and C++ libraries. After installing a library, add a line like <code>// link: -lfmt</code> at the top of your file so Run links it.</p>
+      <div class="line">
+        <span id="vcStatus"></span>
+        <button id="vcSetup">Install vcpkg</button>
+      </div>
+      <div class="line">
+        <input id="vcName" placeholder="e.g. fmt">
+        <button id="vcInstall" class="primary">Install</button>
+        <button id="vcSearch">Search</button>
+        <button id="vcRemove">Remove</button>
+        <button id="vcList">Show installed</button>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-setup">
+      <p class="hint">CodeBox needs each language's tools installed on this PC. Click Install for anything missing (uses winget, which ships with Windows 10 and 11).</p>
+      <div id="setupRows"></div>
+      <div class="line">
+        <button id="setupAll" class="primary">Install everything missing</button>
+        <button id="setupRefresh">Re-check</button>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-settings">
+      <div class="setting"><label>Theme</label>
+        <select id="setTheme"><option value="dark">Dark</option><option value="light">Light</option></select></div>
+      <div class="setting"><label>Font size</label>
+        <input id="setFont" type="range" min="10" max="26" step="1"><span id="setFontVal"></span></div>
+      <div class="setting"><label>Word wrap</label><input id="setWrap" type="checkbox"></div>
+      <div class="setting"><label>Save automatically</label><input id="setAuto" type="checkbox"></div>
+      <div class="setting"><label>Check for updates on start</label><input id="setUpd" type="checkbox"></div>
+      <div class="setting"><label>Project folder</label><span id="setWs" class="mono"></span><button id="setOpenWs">Show in Explorer</button></div>
+    </div>
+
+    <div class="pane" id="pane-update">
+      <div class="updbox">
+        <div class="updver">CodeBox <b id="updCur"></b></div>
+        <div id="updMsg" class="updmsg"></div>
+        <div id="updBarWrap" class="bar hidden"><div id="updBar"></div></div>
+        <pre id="updNotes" class="hidden"></pre>
+        <div class="line">
+          <button id="updCheck" class="primary">Check for updates</button>
+          <button id="updDownload" class="primary hidden">Download update</button>
+          <button id="updInstall" class="run hidden">Restart and update</button>
+        </div>
+        <p class="hint">Updates download in the background and install in a few seconds. Your files and settings are kept and you don't need to reinstall.</p>
+      </div>
+    </div>
+
+    <pre id="log"></pre>
+  </div>
+</div>
+
+<div id="ask" class="hidden">
+  <div id="askBox">
+    <div id="askTitle"></div>
+    <input id="askInput">
+    <div id="askErr"></div>
+    <div class="line end">
+      <button id="askCancel">Cancel</button>
+      <button id="askOk" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

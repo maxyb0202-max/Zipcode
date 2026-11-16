@@ -1,5 +1,5 @@
 {
-  "name": "codebox",
+  "name": "zipcode",
   "version": "1.4.2",
   "description": "Super simple IDE for Python, Java, C and C++",
   "main": "main.js",
@@ -21,8 +21,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.codebox.ide",
-    "productName": "CodeBox",
+    "appId": "com.zipcode.ide",
+    "productName": "Zipcode",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -50,8 +50,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "CodeBox",
-      "artifactName": "CodeBox-Setup.exe",
+      "shortcutName": "Zipcode",
+      "artifactName": "Zipcode-Setup.exe",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     },
@@ -59,7 +59,7 @@
       {
         "provider": "github",
         "owner": "maxyb0202-max",
-        "repo": "codebox",
+        "repo": "zipcode",
         "releaseType": "release"
       }
     ]

@@ -1,10 +1,17 @@
 'use strict';
-/* ── CodeBox v1.4.0 renderer ─────────────────────────────────── */
+/* ── Zipcode v1.4.2 renderer ─────────────────────────────────── */
 
-const { cbx } = window;
+// Support both window.cbx (v1.4+) and window.api (legacy fallback)
+const cbx = window.cbx || window.api || {};
 
 /* ── Monaco ──────────────────────────────────────────────────── */
-require.config({ paths: { vs: '../node_modules/monaco-editor/min/vs' } });
+// Use absolute URL so Monaco AMD + workers resolve correctly inside the ASAR
+const __monacoBase = new URL('../node_modules/monaco-editor/min/', location.href).href;
+window.MonacoEnvironment = {
+  getWorkerUrl: () => 'data:text/javascript;charset=utf-8,' + encodeURIComponent(
+    `self.MonacoEnvironment={baseUrl:'${__monacoBase}'};importScripts('${__monacoBase}vs/base/worker/workerMain.js');`)
+};
+require.config({ paths: { vs: __monacoBase + 'vs' } });
 
 let editor, terminalObj, fitAddon;
 let currentFile = null;
@@ -27,18 +34,41 @@ const DEF = {
 };
 
 /* ── Init ─────────────────────────────────────────────────────── */
+function showError(title, msg) {
+  document.body.innerHTML = `<div style="position:fixed;inset:0;background:#1b1d23;color:#f47067;font-family:monospace;padding:40px;font-size:14px;z-index:9999;overflow:auto">
+    <b style="font-size:18px">${title}</b><br><br><pre style="white-space:pre-wrap;word-break:break-all">${msg}</pre>
+  </div>`;
+}
+window.onerror = (msg, src, line, col, err) => {
+  showError('Zipcode startup error', `${msg}\n\n${src} line ${line}:${col}\n\n${err ? err.stack : ''}`);
+};
+
+// Loading indicator — visible immediately; removed when Monaco callback fires
+const __diag = document.createElement('div');
+__diag.style.cssText = 'position:fixed;bottom:48px;left:50%;transform:translateX(-50%);background:#2a2d35;color:#a0a4b0;font-size:12px;padding:6px 14px;border-radius:4px;z-index:9999;pointer-events:none';
+__diag.textContent = 'Loading Monaco editor…';
+document.body.appendChild(__diag);
+
 require(['vs/editor/editor.main'], () => {
-  defineThemes();
-  loadSettings();
-  initTerminal();
-  loadSplitPref();
-  wire();
-  showWelcome();
-  if (settings.updCheck) cbx.updGet();
-  cbx.getVersion().then(v => {
-    document.getElementById('sbVer').textContent = 'v' + v;
-    document.getElementById('updCur').textContent = v;
-  });
+  __diag.remove();
+  try {
+    defineThemes();
+    loadSettings();
+    initTerminal();
+    loadSplitPref();
+    wire();
+    showWelcome();
+    if (settings.updCheck && cbx.updGet) cbx.updGet();
+    if (cbx.getVersion) cbx.getVersion().then(v => {
+      document.getElementById('sbVer').textContent = 'v' + v;
+      document.getElementById('updCur').textContent = v;
+    });
+  } catch(e) {
+    showError('Zipcode init error', e.stack || e.message);
+  }
+}, (amdErr) => {
+  // AMD module load failure — Monaco itself failed to load
+  showError('Monaco failed to load', String(amdErr) + '\n\nrequired: ' + (amdErr && amdErr.requireType) + '\n' + (amdErr && amdErr.requireModules));
 });
 
 /* ═════════════════════════════════════════════════════════════════
@@ -641,21 +671,31 @@ function initTerminal() {
   terminalObj.loadAddon(fitAddon);
   terminalObj.open(document.getElementById('term'));
   fitAddon.fit();
-  terminalObj.writeln('\x1b[32mCodeBox v1.4.0 — terminal ready\x1b[0m');
-  cbx.onTermOutput((_e, data) => {
+  terminalObj.writeln('\x1b[32mZipcode v1.4.2 — terminal ready\x1b[0m');
+  if (cbx.onTermOutput) cbx.onTermOutput((data) => {
+    terminalObj.write(data);
+    updateProblems(data);
+    q('#problemsPane').dataset.lastText = (q('#problemsPane').dataset.lastText || '') + data;
+  }); else if (cbx.on) cbx.on('shell:data', data => {
     terminalObj.write(data);
     updateProblems(data);
     q('#problemsPane').dataset.lastText = (q('#problemsPane').dataset.lastText || '') + data;
   });
-  cbx.onRunFinished((_e, code) => {
+  if (cbx.onRunFinished) cbx.onRunFinished((code) => {
     stopRunTimer();
     const ok = code === 0;
     terminalObj.writeln(`\x1b[${ok ? '32' : '31'}m\n── Exited with code ${code} ──\x1b[0m`);
     q('#btnRun').disabled = false;
     q('#btnStop').disabled = true;
     setSbRun(ok ? 'idle' : 'error', ok ? 'Ready' : 'Error');
+  }); else if (cbx.on) cbx.on('shell:exit', code => {
+    stopRunTimer();
+    const ok = code === 0;
+    terminalObj.writeln(`\x1b[${ok ? '32' : '31'}m\n── Exited with code ${code} ──\x1b[0m`);
+    q('#btnRun').disabled = false; q('#btnStop').disabled = true;
+    setSbRun(ok ? 'idle' : 'error', ok ? 'Ready' : 'Error');
   });
-  terminalObj.onData(d => cbx.termInput(d));
+  terminalObj.onData(d => cbx.termInput ? cbx.termInput(d) : cbx.shellWrite && cbx.shellWrite(d));
 }
 function termTheme() {
   const dark = { background: '#14161b', foreground: '#c8ccd8', cursor: '#7c8498', selectionBackground: '#1b2d50', black: '#14161b', red: '#f26a6a', green: '#5ad17e', yellow: '#e8d060', blue: '#7eb8f5', magenta: '#b48df0', cyan: '#60c8d8', white: '#c8ccd8', brightBlack: '#4a5068', brightRed: '#ff8080', brightGreen: '#76e89a', brightYellow: '#ffe080', brightBlue: '#90c8ff', brightMagenta: '#c8a0ff', brightCyan: '#78e0f0', brightWhite: '#e8eaee' };
@@ -876,7 +916,7 @@ function setupUpdateButtons() {
     cbx.updDownload();
   };
   q('#updInstall').onclick = () => cbx.updInstall();
-  cbx.onUpdProgress((_e, pct) => {
+  if (cbx.onUpdProgress) cbx.onUpdProgress((pct) => {
     q('#updBar').style.width = pct + '%';
     if (pct >= 100) { q('#updInstall').classList.remove('hidden'); q('#updMsg').textContent = 'Ready to install.'; }
   });
@@ -1055,7 +1095,8 @@ function wire() {
   q('#btnPkg').onclick    = () => showOverlay('python');
   q('#btnSetup').onclick  = () => showOverlay('setup');
   q('#btnSettings').onclick = () => showOverlay('settings');
-  q('#btnUpdate').onclick = () => showOverlay('update');
+  q('#btnUpdate').onclick   = () => showOverlay('update');
+  q('#btnHelp').onclick     = () => cbx.openExternal('https://claude.ai/artifact/Eq1gVrsppJFZjizS3icH2r');
 
   /* ── Welcome screen ── */
   q('#wNewFile').onclick    = () => newFile();

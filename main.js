@@ -1,11 +1,11 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { spawn, exec, execFileSync } = require('child_process');
 
 const IS_WIN = process.platform === 'win32';
-const HOME_DIR = path.join(os.homedir(), '.codebox');
+const HOME_DIR = path.join(os.homedir(), '.zipcode');
 const VCPKG_ROOT = path.join(HOME_DIR, 'vcpkg');
 const HELPER = path.join(HOME_DIR, 'unbuf.c');
 
@@ -120,7 +120,7 @@ function createFile(lang, dir, name, example) {
 }
 
 function ensureWorkspace() {
-  const def = path.join(app.getPath('documents'), 'CodeBox');
+  const def = path.join(app.getPath('documents'), 'Zipcode');
   workspace = settings.lastWorkspace && fs.existsSync(settings.lastWorkspace) ? settings.lastWorkspace : def;
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(HOME_DIR, { recursive: true });
@@ -497,7 +497,7 @@ function registerIpc() {
   ipcMain.handle('upd:install', () => {
     if (!updater || updState.state !== 'ready') return false;
     killShell();
-    setImmediate(() => updater.quitAndInstall(true, true));   // silent install, then reopen CodeBox
+    setImmediate(() => updater.quitAndInstall(true, true));   // silent install, then reopen Zipcode
     return true;
   });
 
@@ -596,7 +596,7 @@ function createWindow() {
   const light = settings.theme === 'light';
   win = new BrowserWindow({
     width: 1300, height: 840, minWidth: 900, minHeight: 560,
-    backgroundColor: light ? '#ffffff' : '#1b1d23', title: 'CodeBox',
+    backgroundColor: light ? '#ffffff' : '#1b1d23', title: 'Zipcode',
     icon: path.join(__dirname, 'build', 'icon.png'),
     // On Windows the toolbar doubles as the title bar, with the normal window buttons on the right.
     ...(IS_WIN ? { titleBarStyle: 'hidden', titleBarOverlay: OVERLAY[light ? 'light' : 'dark'] } : {}),
@@ -645,6 +645,8 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     initUpdater();
     createWindow();
+    globalShortcut.register('F12', () => { if (win && !win.isDestroyed()) win.webContents.toggleDevTools(); });
+    globalShortcut.register('CommandOrControl+Shift+I', () => { if (win && !win.isDestroyed()) win.webContents.toggleDevTools(); });
   });
   app.on('before-quit', killShell);
   app.on('window-all-closed', () => app.quit());

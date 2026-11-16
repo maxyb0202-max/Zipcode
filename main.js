@@ -434,6 +434,58 @@ function registerIpc() {
     catch (e) { return { ok: false, error: e.message }; }
   });
 
+  // Quick open — flat list of all files in workspace
+  ipcMain.handle('fs:quickopen', async (_e, dir) => {
+    const results = [];
+    const SKIP = new Set(['node_modules', 'build', '.git', '__pycache__', '.gradle', 'dist', 'out', 'target']);
+    const walk = async (d, rel) => {
+      try {
+        const items = await fsp.readdir(d, { withFileTypes: true });
+        for (const it of items) {
+          if (it.name.startsWith('.') || SKIP.has(it.name)) continue;
+          const full = path.join(d, it.name);
+          const r = rel ? rel + '/' + it.name : it.name;
+          if (it.isDirectory()) await walk(full, r);
+          else results.push({ name: it.name, rel: r, full });
+          if (results.length > 2000) return;
+        }
+      } catch (_) {}
+    };
+    await walk(dir, '');
+    return results;
+  });
+
+  // TODO scanner
+  ipcMain.handle('todo:scan', async (_e, dir) => {
+    const results = [];
+    const TODO_RE = /(TODO|FIXME|HACK|NOTE|XXX|BUG)[\s:]*(.*)/i;
+    const TEXT_EXTS = new Set(['py', 'java', 'c', 'cpp', 'h', 'hpp', 'js', 'ts', 'txt', 'md', 'json', 'css', 'html', 'cc', 'cxx', 'hh']);
+    const SKIP = new Set(['node_modules', 'build', '.git', '__pycache__', 'dist', 'out', 'target']);
+    const walk = async (d) => {
+      try {
+        const items = await fsp.readdir(d, { withFileTypes: true });
+        for (const it of items) {
+          if (it.name.startsWith('.') || SKIP.has(it.name)) continue;
+          const full = path.join(d, it.name);
+          if (it.isDirectory()) { await walk(full); continue; }
+          const ext = it.name.split('.').pop().toLowerCase();
+          if (!TEXT_EXTS.has(ext)) continue;
+          try {
+            const text = await fsp.readFile(full, 'utf8');
+            const lines = text.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+              const m = TODO_RE.exec(lines[i]);
+              if (m) results.push({ file: full, line: i + 1, kind: m[1].toUpperCase(), text: (m[2] || lines[i]).trim().slice(0, 120) });
+            }
+          } catch (_) {}
+          if (results.length > 500) return;
+        }
+      } catch (_) {}
+    };
+    await walk(dir);
+    return results;
+  });
+
   ipcMain.handle('upd:get', () => updState);
   ipcMain.handle('upd:check', () => checkUpdates());
   ipcMain.handle('upd:download', async () => {
@@ -448,6 +500,91 @@ function registerIpc() {
     setImmediate(() => updater.quitAndInstall(true, true));   // silent install, then reopen CodeBox
     return true;
   });
+
+  // ---- file dialogs
+  ipcMain.handle('dialog:open-file', async () => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  ipcMain.handle('dialog:save-as', async (_e, currentPath) => {
+    const r = await dialog.showSaveDialog(win, { defaultPath: currentPath || undefined });
+    return r.canceled ? null : r.filePath;
+  });
+  ipcMain.handle('dialog:open-folder', async () => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+
+  // ---- run a file (streams to shell:data, then shell:exit with code)
+  let runProc = null;
+  ipcMain.handle('run:file', (_e, filePath, lang) => {
+    if (runProc) { try { runProc.kill(); } catch {} runProc = null; }
+    const dir = path.dirname(filePath);
+    const name = path.basename(filePath);
+    const env = freshEnv(true);
+    let cmd, args;
+    if (lang === 'python') { cmd = 'python'; args = [filePath]; }
+    else if (lang === 'java') {
+      const cls = name.replace(/\.java$/, '');
+      cmd = 'sh'; args = ['-c', `javac "${filePath}" && java -cp "${dir}" ${cls}`];
+      if (IS_WIN) { cmd = 'cmd'; args = ['/C', `javac "${filePath}" && java -cp "${dir}" ${cls}`]; }
+    } else if (lang === 'c') {
+      const out = filePath.replace(/\.c$/, IS_WIN ? '.exe' : '.out');
+      cmd = IS_WIN ? 'cmd' : 'sh';
+      args = IS_WIN ? ['/C', `gcc "${filePath}" -o "${out}" && "${out}"`] : ['-c', `gcc "${filePath}" -o "${out}" && "${out}"`];
+    } else if (lang === 'cpp') {
+      const out = filePath.replace(/\.cpp$/, IS_WIN ? '.exe' : '.out');
+      cmd = IS_WIN ? 'cmd' : 'sh';
+      args = IS_WIN ? ['/C', `g++ "${filePath}" -o "${out}" && "${out}"`] : ['-c', `g++ "${filePath}" -o "${out}" && "${out}"`];
+    } else {
+      send('shell:data', 'Unknown language\n'); send('shell:exit', 1); return false;
+    }
+    const p = spawn(cmd, args, { cwd: dir, env, windowsHide: true });
+    runProc = p;
+    p.stdout.on('data', d => send('shell:data', d.toString('utf8')));
+    p.stderr.on('data', d => send('shell:data', d.toString('utf8')));
+    p.on('error', e => { send('shell:data', 'Run error: ' + e.message + '\n'); send('shell:exit', -1); runProc = null; });
+    p.on('close', code => { send('shell:exit', code ?? 0); runProc = null; });
+    return true;
+  });
+  ipcMain.handle('run:stop', () => {
+    if (!runProc) return false;
+    try {
+      if (IS_WIN) spawn('taskkill', ['/pid', String(runProc.pid), '/T', '/F'], { windowsHide: true });
+      else runProc.kill('SIGKILL');
+    } catch {}
+    runProc = null;
+    return true;
+  });
+
+  // ---- pip helpers
+  const pipRun = (args) => new Promise(resolve => {
+    const p = spawn('python', ['-m', 'pip', ...args], { env: freshEnv(), windowsHide: true });
+    let out = '';
+    p.stdout.on('data', d => { out += d; send('pkg:log', d.toString()); });
+    p.stderr.on('data', d => { out += d; send('pkg:log', d.toString()); });
+    p.on('close', code => resolve(code === 0 ? out : null));
+  });
+  ipcMain.handle('pip:install', (_e, name) => pipRun(['install', name]));
+  ipcMain.handle('pip:remove',  (_e, name) => pipRun(['uninstall', '-y', name]));
+  ipcMain.handle('pip:list',    () => pipRun(['list']));
+  ipcMain.handle('pip:req',     (_e, fp) => pipRun(['install', '-r', fp]));
+
+  // ---- tool install (winget)
+  ipcMain.handle('tool:install', (_e, label) => {
+    const pkg = { python: 'Python.Python.3', java: 'Oracle.JDK.21', gcc: 'StrawberryPerl.StrawberryPerl', node: 'OpenJS.NodeJS' };
+    const id = pkg[label];
+    if (!id) return false;
+    return new Promise(resolve => {
+      const p = spawn('winget', ['install', '--id', id, '-e', '--accept-source-agreements', '--accept-package-agreements'], { windowsHide: true });
+      p.stdout.on('data', d => send('pkg:log', d.toString()));
+      p.stderr.on('data', d => send('pkg:log', d.toString()));
+      p.on('close', code => resolve(code === 0));
+    });
+  });
+
+  // ---- show in explorer
+  ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
 }
 
 const OVERLAY = {

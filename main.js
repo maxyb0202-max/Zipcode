@@ -604,6 +604,7 @@ function createWindow() {
   });
   Menu.setApplicationMenu(null);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.webContents.openDevTools(); // TEMP: auto-open for debugging
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.once('did-finish-load', () => {
     if (updater && settings.autoCheckUpdates) setTimeout(checkUpdates, 4000);

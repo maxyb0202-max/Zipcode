@@ -1,7 +1,8 @@
 'use strict';
-/* ── CodeBox v1.4.0 renderer ─────────────────────────────────── */
+/* ── CodeBox v1.4.1 renderer ─────────────────────────────────── */
 
-const { cbx } = window;
+// Support both window.cbx (v1.4+) and window.api (legacy fallback)
+const cbx = window.cbx || window.api || {};
 
 /* ── Monaco ──────────────────────────────────────────────────── */
 require.config({ paths: { vs: '../node_modules/monaco-editor/min/vs' } });
@@ -34,8 +35,8 @@ require(['vs/editor/editor.main'], () => {
   loadSplitPref();
   wire();
   showWelcome();
-  if (settings.updCheck) cbx.updGet();
-  cbx.getVersion().then(v => {
+  if (settings.updCheck && cbx.updGet) cbx.updGet();
+  if (cbx.getVersion) cbx.getVersion().then(v => {
     document.getElementById('sbVer').textContent = 'v' + v;
     document.getElementById('updCur').textContent = v;
   });
@@ -642,20 +643,30 @@ function initTerminal() {
   terminalObj.open(document.getElementById('term'));
   fitAddon.fit();
   terminalObj.writeln('\x1b[32mCodeBox v1.4.0 — terminal ready\x1b[0m');
-  cbx.onTermOutput((_e, data) => {
+  if (cbx.onTermOutput) cbx.onTermOutput((_e, data) => {
+    terminalObj.write(data);
+    updateProblems(data);
+    q('#problemsPane').dataset.lastText = (q('#problemsPane').dataset.lastText || '') + data;
+  }); else if (cbx.on) cbx.on('shell:data', data => {
     terminalObj.write(data);
     updateProblems(data);
     q('#problemsPane').dataset.lastText = (q('#problemsPane').dataset.lastText || '') + data;
   });
-  cbx.onRunFinished((_e, code) => {
+  if (cbx.onRunFinished) cbx.onRunFinished((_e, code) => {
     stopRunTimer();
     const ok = code === 0;
     terminalObj.writeln(`\x1b[${ok ? '32' : '31'}m\n── Exited with code ${code} ──\x1b[0m`);
     q('#btnRun').disabled = false;
     q('#btnStop').disabled = true;
     setSbRun(ok ? 'idle' : 'error', ok ? 'Ready' : 'Error');
+  }); else if (cbx.on) cbx.on('shell:exit', code => {
+    stopRunTimer();
+    const ok = code === 0;
+    terminalObj.writeln(`\x1b[${ok ? '32' : '31'}m\n── Exited with code ${code} ──\x1b[0m`);
+    q('#btnRun').disabled = false; q('#btnStop').disabled = true;
+    setSbRun(ok ? 'idle' : 'error', ok ? 'Ready' : 'Error');
   });
-  terminalObj.onData(d => cbx.termInput(d));
+  terminalObj.onData(d => cbx.termInput ? cbx.termInput(d) : cbx.shellWrite && cbx.shellWrite(d));
 }
 function termTheme() {
   const dark = { background: '#14161b', foreground: '#c8ccd8', cursor: '#7c8498', selectionBackground: '#1b2d50', black: '#14161b', red: '#f26a6a', green: '#5ad17e', yellow: '#e8d060', blue: '#7eb8f5', magenta: '#b48df0', cyan: '#60c8d8', white: '#c8ccd8', brightBlack: '#4a5068', brightRed: '#ff8080', brightGreen: '#76e89a', brightYellow: '#ffe080', brightBlue: '#90c8ff', brightMagenta: '#c8a0ff', brightCyan: '#78e0f0', brightWhite: '#e8eaee' };
@@ -876,7 +887,7 @@ function setupUpdateButtons() {
     cbx.updDownload();
   };
   q('#updInstall').onclick = () => cbx.updInstall();
-  cbx.onUpdProgress((_e, pct) => {
+  if (cbx.onUpdProgress) cbx.onUpdProgress((_e, pct) => {
     q('#updBar').style.width = pct + '%';
     if (pct >= 100) { q('#updInstall').classList.remove('hidden'); q('#updMsg').textContent = 'Ready to install.'; }
   });

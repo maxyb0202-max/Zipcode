@@ -1,4 +1,4 @@
-/* CodeBox — one set of tokens, dark by default, body.light swaps them. */
+/* CodeBox — one set of tokens, dark by default, body.light/monokai/nord/github-light swaps them. */
 :root {
   --bg: #1b1d23;          /* editor */
   --bg-side: #1f2228;     /* explorer, panel */
@@ -42,6 +42,69 @@ body.light {
   --ok: #1f9850;
   --warn: #a8740b;
   --shadow: 0 18px 48px -14px rgba(20, 30, 50, .28), 0 0 0 1px rgba(20, 30, 50, .08);
+  color-scheme: light;
+}
+body.monokai {
+  --bg: #272822;
+  --bg-side: #21221c;
+  --bg-bar: #1b1c17;
+  --bg-raise: #2d2e27;
+  --bg-hover: #33342d;
+  --bg-sel: #3d3d2f;
+  --line: #3a3b33;
+  --text: #f8f8f2;
+  --text-2: #a9a9a2;
+  --text-3: #75756f;
+  --accent: #a6e22e;
+  --accent-ink: #1b1c17;
+  --go: #a6e22e;
+  --go-hover: #c0f047;
+  --danger: #f92672;
+  --ok: #a6e22e;
+  --warn: #e6db74;
+  --shadow: 0 18px 48px -12px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04);
+  color-scheme: dark;
+}
+body.nord {
+  --bg: #2e3440;
+  --bg-side: #272c38;
+  --bg-bar: #22262f;
+  --bg-raise: #353a47;
+  --bg-hover: #3c4253;
+  --bg-sel: #3b4a6b;
+  --line: #3c4253;
+  --text: #eceff4;
+  --text-2: #9299a8;
+  --text-3: #636b78;
+  --accent: #88c0d0;
+  --accent-ink: #2e3440;
+  --go: #a3be8c;
+  --go-hover: #b8d4a1;
+  --danger: #bf616a;
+  --ok: #a3be8c;
+  --warn: #ebcb8b;
+  --shadow: 0 18px 48px -12px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04);
+  color-scheme: dark;
+}
+body.github-light {
+  --bg: #ffffff;
+  --bg-side: #f6f8fa;
+  --bg-bar: #f0f2f5;
+  --bg-raise: #ffffff;
+  --bg-hover: #eaedf1;
+  --bg-sel: #ddeeff;
+  --line: #d0d7de;
+  --text: #1f2328;
+  --text-2: #57606a;
+  --text-3: #8c959f;
+  --accent: #0969da;
+  --accent-ink: #ffffff;
+  --go: #1a7f37;
+  --go-hover: #168030;
+  --danger: #cf222e;
+  --ok: #1a7f37;
+  --warn: #9a6700;
+  --shadow: 0 18px 48px -14px rgba(20,30,50,.2), 0 0 0 1px rgba(20,30,50,.08);
   color-scheme: light;
 }
 
@@ -115,7 +178,8 @@ body.overlay #titlebar { padding-right: calc(100vw - env(titlebar-area-x, 0px) -
 
 /* ---------- layout */
 #main { flex: 1; display: flex; min-height: 0; }
-#side { width: 236px; flex: none; display: flex; flex-direction: column; background: var(--bg-side); border-right: 1px solid var(--line); }
+#side { width: 236px; flex: none; display: flex; flex-direction: column; background: var(--bg-side); border-right: 1px solid var(--line); overflow: hidden; }
+#sideExplorer, #sideSearch, #sideGit { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .panehead { display: flex; align-items: center; gap: 8px; height: 34px; flex: none; padding: 0 6px 0 12px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-2); }
 .panehead .acts { display: flex; gap: 1px; margin-left: auto; }
 .panehead .grow + .acts { margin-left: 0; }
@@ -287,6 +351,77 @@ body.light #ask { background: rgba(30, 40, 60, .2); }
 #askTitle { font-weight: 600; font-size: 14px; margin-bottom: 10px; }
 #askInput { width: 100%; font-family: var(--mono); font-size: 13px; }
 #askErr { color: var(--danger); min-height: 18px; margin: 6px 0 4px; font-size: 12px; }
+
+/* ---------- sidebar rail */
+#sideRail { width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; padding: 6px 0; gap: 2px; background: var(--bg-bar); border-right: 1px solid var(--line); }
+.rail { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-3); display: grid; place-items: center; position: relative; }
+.rail:hover { background: var(--bg-hover); color: var(--text); }
+.rail.on { background: var(--bg-sel); color: var(--accent); }
+.rail svg { width: 18px; height: 18px; }
+#gitDot { top: 5px; right: 5px; }
+
+/* ---------- search panel */
+.searchinput { display: flex; gap: 4px; padding: 6px 8px; }
+.searchinput input { flex: 1; font-size: 12px; padding: 5px 8px; }
+#searchResults { flex: 1; overflow: auto; padding: 0 4px 8px; }
+.sresult-file { padding: 5px 8px 2px; font-size: 11px; font-weight: 600; color: var(--text-2); letter-spacing: .02em; border-top: 1px solid var(--line); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sresult-file:first-child { border-top: 0; margin-top: 0; }
+.sresult-row { display: flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; border-radius: 5px; cursor: pointer; }
+.sresult-row:hover { background: var(--bg-hover); }
+.sresult-row .ln { width: 32px; color: var(--text-3); font: 11px var(--mono); text-align: right; flex: none; }
+.sresult-row .txt { font: 12px var(--mono); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.sresult-row .txt em { color: var(--accent); font-style: normal; font-weight: 700; }
+.search-empty { padding: 14px 10px; color: var(--text-3); font-size: 12px; text-align: center; }
+
+/* ---------- git panel */
+.gitbranch { padding: 6px 12px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+.gitbranch svg { width: 14px; height: 14px; color: var(--accent); }
+#gitFiles { flex: 1; overflow: auto; padding: 0 4px 4px; min-height: 60px; max-height: 180px; }
+.git-file { display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 8px; border-radius: 5px; cursor: pointer; }
+.git-file:hover { background: var(--bg-hover); }
+.git-file .gstat { width: 14px; font: 700 11px var(--mono); text-align: center; flex: none; border-radius: 3px; padding: 0 2px; }
+.gstat.M { color: var(--warn); }
+.gstat.A { color: var(--ok); }
+.gstat.D { color: var(--danger); }
+.gstat.U { color: var(--accent); }
+.gstat.s { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.git-file .gname { font: 12px var(--mono); color: var(--text-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#gitActions { padding: 6px 8px 8px; border-top: 1px solid var(--line); }
+#gitMsg { width: 100%; font-size: 12px; padding: 6px 8px; margin-bottom: 6px; }
+.git-btn-row { display: flex; gap: 5px; }
+.git-btn-row button { flex: 1; font-size: 11px; padding: 5px 4px; justify-content: center; }
+.git-btn-row button.primary { flex: 2; }
+#gitLog { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; max-height: 100px; overflow: auto; }
+.git-commit { font: 11px var(--mono); padding: 2px 4px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.git-commit .ghash { color: var(--accent); margin-right: 6px; }
+.git-empty { padding: 10px 8px; color: var(--text-3); font-size: 12px; }
+
+/* ---------- panel tabs */
+.panel-tabs { display: flex; gap: 0; }
+.paneltab { border: 0; background: transparent; color: var(--text-2); padding: 0 14px; height: 34px; border-radius: 0; font-size: 12px; font-weight: 500; border-bottom: 2px solid transparent; }
+.paneltab:hover { color: var(--text); background: var(--bg-hover); }
+.paneltab.on { color: var(--text); border-bottom-color: var(--accent); }
+.pbadge { background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 99px; margin-left: 4px; }
+#problemsPane { flex: 1; overflow: auto; padding: 4px 8px; }
+.prob-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.prob-row:hover { background: var(--bg-hover); }
+.prob-icon { width: 14px; height: 14px; flex: none; }
+.prob-icon.error { color: var(--danger); }
+.prob-icon.warning { color: var(--warn); }
+.prob-msg { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prob-loc { font: 11px var(--mono); color: var(--text-3); flex: none; }
+
+/* ---------- recent projects list */
+#recentList { margin-top: 2px; }
+.recent-row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.recent-row:last-child { border-bottom: 0; }
+.recent-row:hover { opacity: .8; }
+.recent-row .rpath { flex: 1; font: 12px var(--mono); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-row .rname { font-weight: 600; font-size: 12px; }
+
+/* ---------- status bar branch */
+#sbBranch { display: flex; align-items: center; gap: 5px; color: var(--text-2); }
+#sbBranch svg { width: 13px; height: 13px; }
 
 @media (max-width: 1100px) {
   .tb span:not(.dot) { display: none; }

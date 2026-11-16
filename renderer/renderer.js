@@ -127,8 +127,222 @@
     $$('#langSeg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.lang === lang)));
   }
 
+  // ------------------------------------------------------------ sidebar rail
+  function switchPanel(id) {
+    $$('.rail').forEach(b => b.classList.remove('on'));
+    document.getElementById('rail' + id).classList.add('on');
+    $$('#sideExplorer, #sideSearch, #sideGit').forEach(p => p.classList.add('hidden'));
+    document.getElementById('side' + id).classList.remove('hidden');
+    if (id === 'Search') setTimeout(() => $('#searchQuery').focus(), 0);
+    if (id === 'Git') refreshGitPanel();
+  }
+
+  // ------------------------------------------------------------ search panel
+  async function runSearch() {
+    const q2 = $('#searchQuery').value.trim();
+    const box = $('#searchResults');
+    if (!q2) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="search-empty">Searching…</div>';
+    try {
+      const results = await api.searchFiles(S.ws, q2);
+      if (!results.length) { box.innerHTML = '<div class="search-empty">No results found.</div>'; return; }
+      // group by file
+      const byFile = new Map();
+      for (const r of results) {
+        if (!byFile.has(r.file)) byFile.set(r.file, []);
+        byFile.get(r.file).push(r);
+      }
+      box.innerHTML = '';
+      for (const [file, rows] of byFile) {
+        const fh = el('div', 'sresult-file');
+        fh.textContent = file.startsWith(S.ws) ? file.slice(S.ws.length + 1) : file;
+        fh.title = file;
+        box.appendChild(fh);
+        for (const r of rows) {
+          const row = el('div', 'sresult-row');
+          const ln = el('span', 'ln'); ln.textContent = r.line;
+          const txt = el('span', 'txt');
+          // highlight the matched text
+          const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          const idx = r.text.toLowerCase().indexOf(q2.toLowerCase());
+          if (idx >= 0) {
+            txt.innerHTML = esc(r.text.slice(0, idx)) + `<em>${esc(r.text.slice(idx, idx + q2.length))}</em>` + esc(r.text.slice(idx + q2.length));
+          } else {
+            txt.textContent = r.text;
+          }
+          row.append(ln, txt);
+          row.onclick = () => { openFile(file).then(() => { if (editor) editor.revealLineInCenter(r.line); editor.setPosition({ lineNumber: r.line, column: 1 }); }); };
+          box.appendChild(row);
+        }
+      }
+    } catch (e) {
+      box.innerHTML = '<div class="search-empty">Search failed.</div>';
+    }
+  }
+
+  // ------------------------------------------------------------ git panel
+  let gitState = null;
+
+  async function refreshGitPanel() {
+    const branchEl = $('#gitBranch');
+    const filesEl = $('#gitFiles');
+    const logEl = $('#gitLog');
+    branchEl.innerHTML = icon('branch') + '<span>Loading…</span>';
+    filesEl.innerHTML = '';
+    logEl.innerHTML = '';
+
+    const st = await api.gitStatus(S.ws);
+    gitState = st;
+
+    if (!st.ok) {
+      branchEl.innerHTML = icon('branch') + '<span style="color:var(--text-3)">Not a git repo</span>';
+      filesEl.innerHTML = `<div class="git-empty">Not a git repo. <button id="gitInitBtn" style="display:inline;padding:2px 8px;font-size:11px">Init</button></div>`;
+      $('#gitInitBtn') && ($('#gitInitBtn').onclick = async () => {
+        await api.gitInit(S.ws);
+        refreshGitPanel();
+      });
+      $('#gitDot').classList.add('hidden');
+      $('#sbBranch').classList.add('hidden');
+      return;
+    }
+
+    const totalChanges = st.staged.length + st.unstaged.length + st.untracked.length;
+    $('#gitDot').classList.toggle('hidden', totalChanges === 0);
+    $('#sbBranch').classList.remove('hidden');
+    $('#sbBranch').innerHTML = icon('branch') + `<span>${st.branch}</span>`;
+
+    branchEl.innerHTML = icon('branch') + `<span>${st.branch}</span>`;
+
+    if (!st.files.length) {
+      filesEl.innerHTML = '<div class="git-empty">No changes</div>';
+    } else {
+      filesEl.innerHTML = '';
+      for (const f of st.files) {
+        const row = el('div', 'git-file');
+        const stat = el('span', 'gstat ' + (f.staged ? 's' : f.status));
+        stat.textContent = f.status;
+        stat.title = f.staged ? 'Staged' : (f.status === 'M' ? 'Modified' : f.status === 'A' ? 'Added' : f.status === 'D' ? 'Deleted' : 'Untracked');
+        const name = el('span', 'gname'); name.textContent = f.name; name.title = f.name;
+        row.append(stat, name);
+        row.onclick = () => {
+          const full = join(S.ws, f.name);
+          if (f.status !== 'D') openFile(full);
+        };
+        filesEl.appendChild(row);
+      }
+    }
+
+    const lg = await api.gitLog(S.ws);
+    if (lg.ok && lg.commits.length) {
+      logEl.innerHTML = '';
+      for (const c of lg.commits.slice(0, 8)) {
+        const row = el('div', 'git-commit');
+        row.innerHTML = `<span class="ghash">${c.hash}</span>${c.msg.replace(/</g,'&lt;')}`;
+        logEl.appendChild(row);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------ problems panel
+  const problems = [];
+  const ERROR_RE = {
+    // gcc/g++: file.c:10:5: error: ...
+    c: /^(.+?):(\d+):\d+:\s*(error|warning):\s*(.+)$/,
+    // java: file.java:10: error: ...
+    java: /^(.+?):(\d+):\s*error:\s*(.+)$/,
+    // python: File "file.py", line 10
+    python: /^\s*File "(.+?)",\s*line\s*(\d+)/
+  };
+
+  function parseProblems(text) {
+    const found = [];
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      let m;
+      if ((m = ERROR_RE.c.exec(l))) {
+        found.push({ type: m[3] === 'error' ? 'error' : 'warning', file: m[1], line: parseInt(m[2]), msg: m[4].trim() });
+      } else if ((m = ERROR_RE.java.exec(l))) {
+        found.push({ type: 'error', file: m[1], line: parseInt(m[2]), msg: m[3].trim() });
+      } else if ((m = ERROR_RE.python.exec(l))) {
+        const nextMsg = lines[i + 1] ? lines[i + 1].trim() : '';
+        found.push({ type: 'error', file: m[1], line: parseInt(m[2]), msg: nextMsg });
+      }
+    }
+    return found;
+  }
+
+  function updateProblems(text) {
+    const found = parseProblems(text);
+    problems.length = 0;
+    problems.push(...found);
+    const count = problems.length;
+    const badge = $('#problemCount');
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
+    renderProblemsPane();
+  }
+
+  function renderProblemsPane() {
+    const pane = $('#problemsPane');
+    pane.innerHTML = '';
+    if (!problems.length) {
+      pane.innerHTML = '<div class="search-empty">No problems detected.</div>';
+      return;
+    }
+    for (const p of problems) {
+      const row = el('div', 'prob-row');
+      const ico = el('span', `prob-icon ${p.type}`);
+      ico.innerHTML = p.type === 'error' ? icon('warn') : icon('warn');
+      const msg = el('span', 'prob-msg');
+      msg.textContent = p.msg;
+      msg.title = p.msg;
+      const loc = el('span', 'prob-loc');
+      loc.textContent = `${basename(p.file)}:${p.line}`;
+      row.append(ico, msg, loc);
+      row.onclick = () => {
+        openFile(p.file).then(() => {
+          if (editor) {
+            editor.revealLineInCenter(p.line);
+            editor.setPosition({ lineNumber: p.line, column: 1 });
+          }
+          switchPanelTab('terminal');
+        });
+      };
+      pane.appendChild(row);
+    }
+  }
+
+  function switchPanelTab(tab) {
+    const isTerminal = tab === 'terminal';
+    $('#tabTerminal').classList.toggle('on', isTerminal);
+    $('#tabProblems').classList.toggle('on', !isTerminal);
+    $('#termwrap').classList.toggle('hidden', !isTerminal);
+    $('#problemsPane').classList.toggle('hidden', isTerminal);
+    if (isTerminal) setTimeout(() => fit && fit.fit(), 0);
+  }
+
+  // ------------------------------------------------------------ execution timer
+  let runStartTime = null, runTimerInterval = null;
+
+  function startRunTimer(name) {
+    runStartTime = Date.now();
+    runTimerInterval = setInterval(() => {
+      const elapsed = ((Date.now() - runStartTime) / 1000).toFixed(1);
+      $('#runState').className = 'pill busy';
+      $('#runState').textContent = `Running ${name} · ${elapsed}s`;
+    }, 100);
+  }
+
+  function stopRunTimer() {
+    clearInterval(runTimerInterval);
+    runTimerInterval = null;
+    runStartTime = null;
+  }
+
   // ------------------------------------------------------------ terminal
   let term, fit, buf = '', busy = true, pend = '', atLineStart = true, runActive = null;
+  let termOutputBuf = '';
   const hist = []; let histIdx = -1;
 
   const TERM_THEMES = {
@@ -137,13 +351,23 @@
       brightBlack: '#6b727d' },
     light: { background: '#f6f7f9', foreground: '#1f2329', cursor: '#1f2329', selectionBackground: '#cfe0fc',
       black: '#1f2329', red: '#cf3c34', green: '#1f9850', yellow: '#a8740b', blue: '#2f6fed', magenta: '#8250df', cyan: '#1b7c83', white: '#5b6370',
-      brightBlack: '#8a919b' }
+      brightBlack: '#8a919b' },
+    monokai: { background: '#272822', foreground: '#f8f8f2', cursor: '#f8f8f2', selectionBackground: '#3d3d2f',
+      black: '#272822', red: '#f92672', green: '#a6e22e', yellow: '#e6db74', blue: '#66d9ef', magenta: '#ae81ff', cyan: '#a1efe4', white: '#f8f8f2',
+      brightBlack: '#75756f' },
+    nord: { background: '#2e3440', foreground: '#eceff4', cursor: '#eceff4', selectionBackground: '#3b4a6b',
+      black: '#3b4252', red: '#bf616a', green: '#a3be8c', yellow: '#ebcb8b', blue: '#81a1c1', magenta: '#b48ead', cyan: '#88c0d0', white: '#e5e9f0',
+      brightBlack: '#636b78' },
+    'github-light': { background: '#ffffff', foreground: '#1f2328', cursor: '#1f2328', selectionBackground: '#ddeeff',
+      black: '#1f2328', red: '#cf222e', green: '#1a7f37', yellow: '#9a6700', blue: '#0969da', magenta: '#8250df', cyan: '#1b7c83', white: '#57606a',
+      brightBlack: '#8c959f' }
   };
 
   function out(s) {
     if (!s) return;
     term.write(s);
     atLineStart = s.endsWith('\n');
+    if (runActive) termOutputBuf += s;
   }
   function note(s, color) {
     if (!atLineStart) out('\r\n');
@@ -151,6 +375,7 @@
   }
 
   function setState(state, text) {
+    if (state !== 'busy') stopRunTimer();
     const pill = $('#runState');
     pill.className = 'pill ' + state;
     pill.textContent = text;
@@ -164,8 +389,17 @@
     busy = false;
     if (runActive) {
       const name = runActive; runActive = null;
-      if (code === 0) { note(`✔ ${name} finished`, 32); setState('idle', 'Finished'); }
-      else { note(`✖ ${name} stopped with an error (exit code ${code})`, 31); setState('fail', 'Error'); }
+      stopRunTimer();
+      const elapsed = runStartTime ? ((Date.now() - runStartTime) / 1000).toFixed(2) : null;
+      if (code === 0) {
+        const msg = elapsed ? `✔ ${name} finished in ${elapsed}s` : `✔ ${name} finished`;
+        note(msg, 32); setState('idle', 'Finished');
+      } else {
+        note(`✖ ${name} stopped with an error (exit code ${code})`, 31); setState('fail', 'Error');
+      }
+      // parse problems from buffered output
+      updateProblems(termOutputBuf);
+      termOutputBuf = '';
     } else if (!$('#runState').classList.contains('fail')) setState('idle', 'Ready');
     term.write(`\x1b[36m${dir}\x1b[0m\x1b[90m>\x1b[0m `);
     atLineStart = false;
@@ -193,7 +427,7 @@
   }
 
   function submit(line) {
-    if (busy) { api.shellWrite(line + EOL); return; }   // input for the running program
+    if (busy) { api.shellWrite(line + EOL); return; }
     if (line.trim() && hist[hist.length - 1] !== line) hist.push(line);
     histIdx = -1;
     if (/^\s*(cls|clear)\s*$/i.test(line)) { term.clear(); line = ''; }
@@ -212,12 +446,15 @@
   function runInTerminal(cmd, name) {
     if (busy) { toast('Something is still running. Press Stop first.', 'warn'); return false; }
     buf = '';
+    termOutputBuf = '';
     if (!atLineStart) out('\r\n');
     note(`▶ Running ${name}`, 36);
     busy = true;
     runActive = name;
     setState('busy', 'Running ' + name);
+    startRunTimer(name);
     showPanel(true);
+    switchPanelTab('terminal');
     api.shellWrite(cmd + JOIN + SENT + EOL);
     term.focus();
     return true;
@@ -226,6 +463,7 @@
   async function restartShell(msg) {
     const wasRunning = !!runActive;
     buf = ''; pend = ''; busy = true; runActive = null;
+    stopRunTimer();
     note(msg || '[terminal restarted]', wasRunning ? 33 : 90);
     setState('idle', wasRunning ? 'Stopped' : 'Ready');
     await api.shellStart();
@@ -240,9 +478,10 @@
   }
 
   function initTerminal() {
+    const theme = S.settings.theme || 'dark';
     term = new Terminal({
       fontFamily: '"Cascadia Code", Consolas, "Courier New", monospace', fontSize: Math.max(11, S.settings.fontSize - 1), cursorBlink: true,
-      theme: TERM_THEMES[S.settings.theme] || TERM_THEMES.dark, scrollback: 5000, lineHeight: 1.15
+      theme: TERM_THEMES[theme] || TERM_THEMES.dark, scrollback: 5000, lineHeight: 1.15
     });
     fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
@@ -462,8 +701,8 @@
     toast(`Created ${basename(r.path)}`, 'ok', example ? { label: 'Run it', run } : null);
   }
 
-  async function openWorkspace() {
-    const p = await api.pickFolder();
+  async function openWorkspace(p) {
+    if (!p) p = await api.pickFolder();
     if (!p) return;
     await saveAll();
     for (const k of [...S.models.keys()]) closeTab(k, true);
@@ -472,6 +711,8 @@
     await restartShell('[opened ' + p + ']');
     await renderTree();
     await openFirst();
+    // refresh git for the new workspace
+    refreshGitPanel();
   }
 
   async function openFirst() {
@@ -560,7 +801,7 @@
       $$('#dlgBody .pane button').forEach(b => { b.disabled = false; });
     }
   }
-  function cmd(c) { logAdd(`> ${c}\n`); return api.run({ cmd: c, cwd: S.ws }); }
+  function cmdRun(c) { logAdd(`> ${c}\n`); return api.run({ cmd: c, cwd: S.ws }); }
 
   function nameFrom(id) {
     const v = $(id).value.trim();
@@ -644,7 +885,7 @@
     if (S.tools && !S.tools.git) { toast('Git is needed first.', 'warn', { label: 'Open Setup', run: () => showPane('setup') }); return; }
     await job(async () => {
       const boot = WIN ? `${q(join(S.vcpkg, 'bootstrap-vcpkg.bat'))} -disableMetrics` : `sh ${q(join(S.vcpkg, 'bootstrap-vcpkg.sh'))} -disableMetrics`;
-      await cmd(`git clone --depth 1 https://github.com/microsoft/vcpkg ${q(S.vcpkg)} && ${boot}`);
+      await cmdRun(`git clone --depth 1 https://github.com/microsoft/vcpkg ${q(S.vcpkg)} && ${boot}`);
       await refreshVcpkg();
     });
   }
@@ -654,7 +895,7 @@
       let arg = '';
       if (action !== 'list') { const n = nameFrom('#vcName'); if (!n) return; arg = ' ' + n; }
       const trip = (action === 'install' || action === 'remove') ? TRIP : '';
-      await job(() => cmd(`${vcExe()} ${action}${arg}${trip}`));
+      await job(() => cmdRun(`${vcExe()} ${action}${arg}${trip}`));
     };
   }
 
@@ -698,7 +939,7 @@
     if (S.tools && !S.tools.winget) { logAdd('winget was not found. Install "App Installer" from the Microsoft Store, then press Check again.\n'); return; }
     if (!list.length) { toast('Everything is already installed.', 'ok'); return; }
     await job(async () => {
-      for (const t of list) await cmd(wingetCmd(t.id));
+      for (const t of list) await cmdRun(wingetCmd(t.id));
       await refreshTools(true);
       await restartShell('[tools updated, terminal restarted]');
     });
@@ -724,14 +965,68 @@
         'editorIndentGuide.background1': '#eceef2', 'editorWidget.background': '#ffffff', 'editorWidget.border': '#dde1e7'
       }
     });
+    monaco.editor.defineTheme('cbx-monokai', {
+      base: 'vs-dark', inherit: true,
+      rules: [
+        { token: 'keyword', foreground: 'f92672' }, { token: 'string', foreground: 'e6db74' },
+        { token: 'comment', foreground: '75715e', fontStyle: 'italic' }, { token: 'number', foreground: 'ae81ff' },
+        { token: 'type', foreground: '66d9ef' }, { token: 'function', foreground: 'a6e22e' }
+      ],
+      colors: {
+        'editor.background': '#272822', 'editorGutter.background': '#272822', 'editor.lineHighlightBackground': '#3e3d32',
+        'editor.lineHighlightBorder': '#00000000', 'editorLineNumber.foreground': '#75756f', 'editorLineNumber.activeForeground': '#c2c2bf',
+        'editor.selectionBackground': '#49483e', 'editorWidget.background': '#2d2e27', 'editorWidget.border': '#3a3b33'
+      }
+    });
+    monaco.editor.defineTheme('cbx-nord', {
+      base: 'vs-dark', inherit: true,
+      rules: [
+        { token: 'keyword', foreground: '81a1c1' }, { token: 'string', foreground: 'a3be8c' },
+        { token: 'comment', foreground: '636b78', fontStyle: 'italic' }, { token: 'number', foreground: 'b48ead' },
+        { token: 'type', foreground: '8fbcbb' }, { token: 'function', foreground: '88c0d0' }
+      ],
+      colors: {
+        'editor.background': '#2e3440', 'editorGutter.background': '#2e3440', 'editor.lineHighlightBackground': '#3b4252',
+        'editor.lineHighlightBorder': '#00000000', 'editorLineNumber.foreground': '#4c566a', 'editorLineNumber.activeForeground': '#9299a8',
+        'editor.selectionBackground': '#3b4a6b', 'editorWidget.background': '#353a47', 'editorWidget.border': '#3c4253'
+      }
+    });
+    monaco.editor.defineTheme('cbx-github', {
+      base: 'vs', inherit: true,
+      rules: [
+        { token: 'keyword', foreground: 'cf222e' }, { token: 'string', foreground: '0a3069' },
+        { token: 'comment', foreground: '6e7781', fontStyle: 'italic' }, { token: 'number', foreground: '0550ae' },
+        { token: 'type', foreground: '8250df' }, { token: 'function', foreground: '6639ba' }
+      ],
+      colors: {
+        'editor.background': '#ffffff', 'editor.lineHighlightBackground': '#f6f8fa', 'editor.lineHighlightBorder': '#00000000',
+        'editorLineNumber.foreground': '#d0d7de', 'editorLineNumber.activeForeground': '#57606a', 'editor.selectionBackground': '#ddeeff',
+        'editorWidget.background': '#ffffff', 'editorWidget.border': '#d0d7de'
+      }
+    });
   }
+
+  function monacoThemeFor(theme) {
+    const map = { dark: 'cbx-dark', light: 'cbx-light', monokai: 'cbx-monokai', nord: 'cbx-nord', 'github-light': 'cbx-github' };
+    return map[theme] || 'cbx-dark';
+  }
+
   function applySettings() {
     const st = S.settings;
-    document.body.classList.toggle('light', st.theme === 'light');
-    monaco.editor.setTheme(st.theme === 'light' ? 'cbx-light' : 'cbx-dark');
-    if (editor) editor.updateOptions({ fontSize: st.fontSize, wordWrap: st.wordWrap ? 'on' : 'off' });
+    // body class for CSS theme tokens
+    document.body.classList.remove('light', 'monokai', 'nord', 'github-light');
+    if (st.theme !== 'dark') document.body.classList.add(st.theme);
+    // monaco theme
+    monaco.editor.setTheme(monacoThemeFor(st.theme));
+    // terminal theme
+    const termTheme = TERM_THEMES[st.theme] || TERM_THEMES.dark;
+    if (editor) editor.updateOptions({
+      fontSize: st.fontSize,
+      wordWrap: st.wordWrap ? 'on' : 'off',
+      minimap: { enabled: !!st.minimap }
+    });
     if (term) {
-      term.options.theme = TERM_THEMES[st.theme] || TERM_THEMES.dark;
+      term.options.theme = termTheme;
       term.options.fontSize = Math.max(11, st.fontSize - 1);
       fit.fit();
     }
@@ -741,14 +1036,34 @@
     applySettings();
     loadSettingsUI();
   }
-  function loadSettingsUI() {
+  async function loadSettingsUI() {
     const st = S.settings;
     $$('#setTheme button').forEach(b => b.classList.toggle('on', b.dataset.v === st.theme));
     $('#setFont').value = st.fontSize; $('#setFontVal').textContent = st.fontSize + ' px';
     $('#setWrap').checked = !!st.wordWrap;
+    $('#setMinimap').checked = !!st.minimap;
     $('#setAuto').checked = !!st.autosave;
     $('#setUpd').checked = !!st.autoCheckUpdates;
     $('#setWs').textContent = S.ws;
+
+    // recent workspaces
+    const list = $('#recentList');
+    list.innerHTML = '';
+    try {
+      const recents = await api.recentFolders();
+      if (!recents.length) {
+        list.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:6px 2px">No recent projects</div>';
+        return;
+      }
+      for (const p of recents) {
+        const row = el('div', 'recent-row');
+        const name = el('span', 'rname'); name.textContent = basename(p);
+        const path = el('span', 'rpath'); path.textContent = p; path.title = p;
+        row.append(name, path);
+        row.onclick = () => { closeDialog(); openWorkspace(p); };
+        list.appendChild(row);
+      }
+    } catch (_) {}
   }
 
   // Updates
@@ -782,8 +1097,8 @@
     $('#btnNew').onclick = e => { e.stopPropagation(); $('#newMenu').classList.contains('hidden') ? newMenu($('#btnNew')) : closeMenu(); };
     $('#sideNew').onclick = () => newFile(S.lang);
     $('#sideRefresh').onclick = () => renderTree();
-    $('#btnOpen').onclick = openWorkspace;
-    $('#sideOpen').onclick = openWorkspace;
+    $('#btnOpen').onclick = () => openWorkspace();
+    $('#sideOpen').onclick = () => openWorkspace();
     $('#btnSave').onclick = saveCurrent;
     $('#btnRun').onclick = run;
     $('#btnStop').onclick = () => { if (busy) restartShell('[stopped]'); };
@@ -803,7 +1118,42 @@
     $('#termRestart').onclick = () => restartShell();
     $('#termToggle').onclick = () => showPanel();
 
-    const pip = args => job(() => cmd(`python -m pip ${args}`));
+    // panel tabs
+    $('#tabTerminal').onclick = () => switchPanelTab('terminal');
+    $('#tabProblems').onclick = () => { switchPanelTab('problems'); renderProblemsPane(); showPanel(true); };
+
+    // sidebar rail
+    $('#railExplorer').onclick = () => switchPanel('Explorer');
+    $('#railSearch').onclick = () => switchPanel('Search');
+    $('#railGit').onclick = () => switchPanel('Git');
+
+    // search
+    $('#searchGo').onclick = runSearch;
+    $('#searchQuery').onkeydown = e => { if (e.key === 'Enter') runSearch(); };
+
+    // git
+    $('#gitRefresh').onclick = refreshGitPanel;
+    $('#gitStageAll').onclick = async () => {
+      const r = await api.gitStage(S.ws, []);
+      if (r.ok) { toast('Staged all changes', 'ok'); refreshGitPanel(); }
+      else toast('Stage failed: ' + (r.error || ''), 'err');
+    };
+    $('#gitCommitBtn').onclick = async () => {
+      const msg = $('#gitMsg').value.trim();
+      if (!msg) { toast('Enter a commit message.', 'warn'); $('#gitMsg').focus(); return; }
+      const r = await api.gitCommit(S.ws, msg);
+      if (r.ok) { toast('Committed', 'ok'); $('#gitMsg').value = ''; refreshGitPanel(); }
+      else toast('Commit failed: ' + (r.error || ''), 'err');
+    };
+    $('#gitPushBtn').onclick = async () => {
+      toast('Pushing…');
+      const r = await api.gitPush(S.ws);
+      if (r.ok) { toast('Pushed', 'ok'); refreshGitPanel(); }
+      else toast('Push failed: ' + (r.error || ''), 'err');
+    };
+    $('#gitMsg').onkeydown = e => { if (e.key === 'Enter' && e.ctrlKey) $('#gitCommitBtn').click(); };
+
+    const pip = args => job(() => cmdRun(`python -m pip ${args}`));
     $('#pyInstall').onclick = () => { const n = nameFrom('#pyName'); if (n) pip(`install ${n}`); };
     $('#pyRemove').onclick = () => { const n = nameFrom('#pyName'); if (n) pip(`uninstall -y ${n}`); };
     $('#pyList').onclick = () => pip('list');
@@ -826,6 +1176,7 @@
     $$('#setTheme button').forEach(b => { b.onclick = () => setSetting({ theme: b.dataset.v }); });
     $('#setFont').oninput = e => { $('#setFontVal').textContent = e.target.value + ' px'; setSetting({ fontSize: Number(e.target.value) }); };
     $('#setWrap').onchange = e => setSetting({ wordWrap: e.target.checked });
+    $('#setMinimap').onchange = e => setSetting({ minimap: e.target.checked });
     $('#setAuto').onchange = e => setSetting({ autosave: e.target.checked });
     $('#setUpd').onchange = e => setSetting({ autoCheckUpdates: e.target.checked });
     $('#setOpenWs').onclick = () => api.openFolder(S.ws);
@@ -842,6 +1193,7 @@
       if (e.key === 'F5') { e.preventDefault(); run(); }
       else if (mod && k === 's') { e.preventDefault(); saveCurrent(); }
       else if (mod && k === 'n') { e.preventDefault(); newFile(S.lang); }
+      else if (mod && e.shiftKey && k === 'f') { e.preventDefault(); switchPanel('Search'); }
       else if (mod && (k === '=' || k === '+')) { e.preventDefault(); setSetting({ fontSize: Math.min(26, S.settings.fontSize + 1) }); }
       else if (mod && k === '-') { e.preventDefault(); setSetting({ fontSize: Math.max(10, S.settings.fontSize - 1) }); }
       else if (mod && k === '`') { e.preventDefault(); showPanel(); }
@@ -858,10 +1210,10 @@
 
     defineThemes();
     editor = monaco.editor.create($('#editor'), {
-      model: null, theme: S.settings.theme === 'light' ? 'cbx-light' : 'cbx-dark', automaticLayout: true,
+      model: null, theme: monacoThemeFor(S.settings.theme || 'dark'), automaticLayout: true,
       fontSize: S.settings.fontSize, wordWrap: S.settings.wordWrap ? 'on' : 'off',
       fontFamily: '"Cascadia Code", Consolas, "Courier New", monospace', fontLigatures: false,
-      minimap: { enabled: false }, scrollBeyondLastLine: false, tabSize: 4, padding: { top: 10 },
+      minimap: { enabled: !!S.settings.minimap }, scrollBeyondLastLine: false, tabSize: 4, padding: { top: 10 },
       renderLineHighlight: 'all', smoothScrolling: true, cursorSmoothCaretAnimation: 'on', roundedSelection: true,
       bracketPairColorization: { enabled: true }, occurrencesHighlight: 'off', guides: { bracketPairs: false, indentation: true },
       scrollbar: { verticalScrollbarSize: 11, horizontalScrollbarSize: 11 }
@@ -885,9 +1237,13 @@
       S.tools = t;
       if (WIN && !(t.python || t.java || t.gcc)) openDialog('setup');
     });
+    // initial git status for statusbar branch
+    refreshGitPanel();
+    // render empty problems pane
+    renderProblemsPane();
   }
 
-  // test hook (only used by automated checks)
+  // test hook
   window.__cbxTest = async mode => {
     if (mode === 'welcome') { for (const k of [...S.models.keys()]) closeTab(k, true); return 'ok'; }
     if (mode === 'run') { await openFirst(); await run(); return 'ok'; }

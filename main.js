@@ -13,15 +13,22 @@ let win = null;
 let sh = null;
 let workspace = null;
 let settingsFile = null;
+let recentWorkspaces = [];
 
 const send = (ch, d) => { if (win && !win.isDestroyed()) win.webContents.send(ch, d); };
 
 // ---------- settings
-const DEFAULTS = { theme: 'dark', fontSize: 14, wordWrap: false, autosave: true, autoCheckUpdates: true, lastWorkspace: null };
+const DEFAULTS = { theme: 'dark', fontSize: 14, wordWrap: false, autosave: true, autoCheckUpdates: true, lastWorkspace: null, minimap: false, recentWorkspaces: [] };
 let settings = { ...DEFAULTS };
 function loadSettings() {
   settingsFile = path.join(app.getPath('userData'), 'settings.json');
   try { settings = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(settingsFile, 'utf8')) }; } catch { settings = { ...DEFAULTS }; }
+  recentWorkspaces = settings.recentWorkspaces || [];
+}
+function addRecent(p) {
+  recentWorkspaces = [p, ...recentWorkspaces.filter(r => r !== p)].slice(0, 8);
+  settings.recentWorkspaces = recentWorkspaces;
+  saveSettings();
 }
 function saveSettings() {
   try { fs.mkdirSync(path.dirname(settingsFile), { recursive: true }); fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2)); } catch { /* ignore */ }
@@ -117,6 +124,7 @@ function ensureWorkspace() {
   workspace = settings.lastWorkspace && fs.existsSync(settings.lastWorkspace) ? settings.lastWorkspace : def;
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(HOME_DIR, { recursive: true });
+  addRecent(workspace);
   // Makes C/C++ output appear immediately in the built-in terminal.
   fs.writeFileSync(HELPER, '#include <stdio.h>\n__attribute__((constructor)) static void cbx_unbuf(void) { setvbuf(stdout, NULL, _IONBF, 0); setvbuf(stderr, NULL, _IONBF, 0); }\n');
   if (!fs.readdirSync(workspace).length) createFile('python', workspace);
@@ -238,7 +246,9 @@ function registerIpc() {
     const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], defaultPath: workspace });
     if (r.canceled || !r.filePaths[0]) return null;
     workspace = r.filePaths[0];
-    settings.lastWorkspace = workspace; saveSettings();
+    settings.lastWorkspace = workspace;
+    addRecent(workspace);
+    saveSettings();
     return workspace;
   });
 
@@ -324,6 +334,104 @@ function registerIpc() {
   ipcMain.handle('maven:remove', (_e, ws, jar) => {
     fs.rmSync(path.join(ws, 'libs', path.basename(jar)), { force: true });
     return true;
+  });
+
+  // ---------- recent workspaces
+  ipcMain.handle('ws:recent', () => recentWorkspaces.filter(p => fs.existsSync(p)));
+  ipcMain.handle('ws:open', async (_e, p) => {
+    if (!fs.existsSync(p)) return false;
+    workspace = p;
+    settings.lastWorkspace = workspace;
+    addRecent(workspace);
+    saveSettings();
+    return workspace;
+  });
+
+  // ---------- file search
+  ipcMain.handle('search:files', async (_e, dir, query) => {
+    const results = [];
+    const q = query.toLowerCase();
+    function walk(d) {
+      let entries;
+      try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === '__pycache__' || e.name === 'build' || e.name === 'libs') continue;
+        const fp = path.join(d, e.name);
+        if (e.isDirectory()) walk(fp);
+        else if (/\.(py|java|c|cpp|h|hpp|txt|md|json|csv)$/i.test(e.name)) {
+          try {
+            const lines = fs.readFileSync(fp, 'utf8').split('\n');
+            for (let i = 0; i < lines.length; i++) {
+              if (lines[i].toLowerCase().includes(q)) {
+                results.push({ file: fp, line: i + 1, text: lines[i].trim() });
+                if (results.length >= 200) return;
+              }
+            }
+          } catch { /* skip */ }
+        }
+      }
+    }
+    walk(dir);
+    return results;
+  });
+
+  // ---------- git
+  function git(args, cwd) {
+    return new Promise((resolve, reject) => {
+      exec(`git ${args}`, { cwd: cwd || workspace, env: freshEnv(), timeout: 15000, windowsHide: true }, (err, so, se) => {
+        if (err) reject(new Error((se || err.message || '').trim()));
+        else resolve((so || '').trim());
+      });
+    });
+  }
+  ipcMain.handle('git:status', async (_e, cwd) => {
+    try {
+      const branch = await git('rev-parse --abbrev-ref HEAD', cwd);
+      const status = await git('status --porcelain', cwd);
+      const lines = status ? status.split('\n').filter(Boolean) : [];
+      const files = lines.map(l => {
+        const xy = l.slice(0, 2), name = l.slice(3);
+        const staged = xy[0] !== ' ' && xy[0] !== '?';
+        const status = xy === '??' ? 'U' : (staged ? xy[0] : xy[1]) || 'M';
+        return { name, status, staged };
+      });
+      const staged = files.filter(f => f.staged).length;
+      const unstaged = files.filter(f => !f.staged).length;
+      const untracked = files.filter(f => f.status === 'U').length;
+      return { ok: true, branch, staged, unstaged, untracked, files };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  });
+  ipcMain.handle('git:log', async (_e, cwd) => {
+    try {
+      const out = await git('log --oneline -20', cwd);
+      const commits = (out ? out.split('\n').filter(Boolean) : []).map(l => {
+        const sp = l.indexOf(' ');
+        return { hash: l.slice(0, sp > 0 ? sp : 7), msg: l.slice(sp + 1) };
+      });
+      return { ok: true, commits };
+    } catch (e) { return { ok: false, commits: [], error: e.message }; }
+  });
+  ipcMain.handle('git:diff', async (_e, cwd, file) => {
+    try { return { ok: true, diff: await git(`diff HEAD -- ${file ? `"${file}"` : '.'}`, cwd) }; }
+    catch (e) { return { ok: false, diff: '', error: e.message }; }
+  });
+  ipcMain.handle('git:stage', async (_e, cwd, files) => {
+    try { await git(`add ${files ? files.map(f => `"${f}"`).join(' ') : '.'}`, cwd); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.message }; }
+  });
+  ipcMain.handle('git:commit', async (_e, cwd, message) => {
+    try { await git(`commit -m "${message.replace(/"/g, '\\"')}"`, cwd); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.message }; }
+  });
+  ipcMain.handle('git:push', async (_e, cwd) => {
+    try { await git('push', cwd); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.message }; }
+  });
+  ipcMain.handle('git:init', async (_e, cwd) => {
+    try { await git('init', cwd); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.message }; }
   });
 
   ipcMain.handle('upd:get', () => updState);

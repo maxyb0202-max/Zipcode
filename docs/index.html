@@ -324,12 +324,19 @@ footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; display: fl
 (function () {
   // ---- Where the downloads live. Change this one line if the repository moves.
   var REPO = 'maxyb0202-max/codebox';
-  var VERSION = '1.2.0';
 
   var gh = 'https://github.com/' + REPO;
   document.querySelectorAll('.dl-link').forEach(function (a) { a.href = gh + '/releases/latest/download/Zipcode-Setup.exe'; });
   document.querySelectorAll('.gh-link').forEach(function (a) { a.href = gh; });
-  document.querySelectorAll('.ver').forEach(function (e) { e.textContent = VERSION; });
+
+  // Fetch the real version from GitHub API so it updates automatically with each release
+  fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var tag = (data.tag_name || '').replace(/^v/, '');
+      if (tag) document.querySelectorAll('.ver').forEach(function (e) { e.textContent = tag; });
+    })
+    .catch(function () {}); // silently ignore if API is unavailable
 
   var DEMOS = {
     python: {

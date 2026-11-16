@@ -136,15 +136,15 @@ function startShell() {
   killShell();
   const env = freshEnv(true);
   const s = IS_WIN
-    ? spawn('cmd.exe', ['/Q', '/K'], { cwd: workspace, env, windowsHide: true })
+    ? spawn('cmd.exe', ['/V:ON', '/Q', '/K'], { cwd: workspace, env, windowsHide: true })
     : spawn('sh', [], { cwd: workspace, env });
   sh = s;
   s.stdout.on('data', d => { if (sh === s) send('shell:data', d.toString('utf8')); });
   s.stderr.on('data', d => { if (sh === s) send('shell:data', d.toString('utf8')); });
   s.on('error', e => send('shell:data', `Shell error: ${e.message}\n`));
   s.on('exit', () => { if (sh === s) { sh = null; send('shell:exit', null); } });
-  if (IS_WIN) s.stdin.write('chcp 65001>nul\r\necho ::CBX::%CD%\r\n');
-  else s.stdin.write('echo ::CBX::$PWD\n');
+  if (IS_WIN) s.stdin.write('chcp 65001>nul\r\necho ::CBX::0::!CD!\r\n');
+  else s.stdin.write('echo ::CBX::0::$PWD\n');
 }
 
 // ---------- maven (Java packages)
@@ -226,7 +226,11 @@ function registerIpc() {
     path: workspace, helper: HELPER, vcpkgRoot: VCPKG_ROOT, version: app.getVersion(),
     packaged: app.isPackaged, settings, examples: Object.fromEntries(Object.entries(EXAMPLES).map(([k, v]) => [k, Object.keys(v)]))
   }));
-  ipcMain.handle('settings:set', (_e, patch) => { settings = { ...settings, ...patch }; saveSettings(); return settings; });
+  ipcMain.handle('settings:set', (_e, patch) => {
+    settings = { ...settings, ...patch }; saveSettings();
+    if (patch.theme && IS_WIN && win) { try { win.setTitleBarOverlay(OVERLAY[settings.theme === 'light' ? 'light' : 'dark']); } catch { /* ignore */ } }
+    return settings;
+  });
   ipcMain.handle('open:external', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
   ipcMain.handle('open:folder', (_e, p) => shell.openPath(p || workspace));
 
@@ -338,11 +342,19 @@ function registerIpc() {
   });
 }
 
+const OVERLAY = {
+  dark: { color: '#16181d', symbolColor: '#c9ced6', height: 44 },
+  light: { color: '#eceef2', symbolColor: '#3b4350', height: 44 }
+};
+
 function createWindow() {
+  const light = settings.theme === 'light';
   win = new BrowserWindow({
-    width: 1280, height: 820, minWidth: 820, minHeight: 520,
-    backgroundColor: settings.theme === 'light' ? '#ffffff' : '#1e1e1e', title: 'CodeBox',
+    width: 1300, height: 840, minWidth: 900, minHeight: 560,
+    backgroundColor: light ? '#ffffff' : '#1b1d23', title: 'CodeBox',
     icon: path.join(__dirname, 'build', 'icon.png'),
+    // On Windows the toolbar doubles as the title bar, with the normal window buttons on the right.
+    ...(IS_WIN ? { titleBarStyle: 'hidden', titleBarOverlay: OVERLAY[light ? 'light' : 'dark'] } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   Menu.setApplicationMenu(null);
@@ -354,13 +366,27 @@ function createWindow() {
 
   if (process.env.CBX_TEST) {
     win.webContents.on('console-message', (...a) => console.log('[renderer]', a[2] !== undefined ? a[2] : (a[0] && a[0].message)));
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const js = c => win.webContents.executeJavaScript(c);
+    const shot = async n => { if (process.env.CBX_SHOTS) fs.writeFileSync(path.join(process.env.CBX_SHOTS, n + '.png'), (await win.webContents.capturePage()).toPNG()); };
     setTimeout(async () => {
       try {
-        const out = await win.webContents.executeJavaScript('window.__cbxTest ? window.__cbxTest() : "no test hook"');
-        console.log('[test]', JSON.stringify(out));
+        if (process.env.CBX_SHOTS) {
+          await js('__cbxTest("run")'); await wait(4000); await shot('1-run');
+          await js('window.api.shellWrite("Max\\n")'); await wait(1500);
+          console.log('[test-after-input]', JSON.stringify(await js('__cbxTest()')));
+          await js('window.api.shellWrite("python -c \\"import sys; sys.exit(3)\\"; echo ::CBX::$?::$PWD\\n")'); await wait(1500);
+          console.log('[test-shell-cmd]', JSON.stringify(await js('__cbxTest()')));
+          await js('__cbxTest("menu")'); await wait(500); await shot('2-menu');
+          await js('document.querySelector("#newMenu").classList.add("hidden")');
+          await js('__cbxTest("dialog")'); await wait(1500); await shot('3-dialog');
+          await js('document.querySelector("#overlay").classList.add("hidden")');
+          await js('__cbxTest("welcome")'); await js('__cbxTest("light")'); await wait(800); await shot('4-welcome-light');
+          await js('__cbxTest("dark")');
+        } else console.log('[test]', JSON.stringify(await js('__cbxTest()')));
       } catch (e) { console.log('[test-error]', e.message); }
       app.quit();
-    }, Number(process.env.CBX_TEST_MS || 12000));
+    }, Number(process.env.CBX_TEST_MS || 9000));
   }
 }
 

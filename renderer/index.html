@@ -7,143 +7,248 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="toolbar">
-  <span class="brand">CodeBox</span>
-  <select id="lang" title="Language for new files">
-    <option value="python">Python</option>
-    <option value="java">Java</option>
-    <option value="c">C</option>
-    <option value="cpp">C++</option>
-  </select>
-  <button id="btnNew" title="New file (Ctrl+N)">+ New</button>
-  <select id="examples" title="Open a ready-made example program"><option value="">Examples...</option></select>
-  <button id="btnOpen" title="Open a different project folder">Open Folder</button>
-  <button id="btnSave" title="Save (Ctrl+S)">Save</button>
-  <button id="btnRun" class="run" title="Run (F5)">&#9654; Run</button>
-  <button id="btnStop" class="stop" title="Stop the running program">&#9632; Stop</button>
-  <span class="grow"></span>
-  <span id="status"></span>
-  <button id="btnPkg" title="Install libraries for the current language">Packages</button>
-  <button id="btnSetup" title="Install Python, Java and C/C++ compilers">Setup</button>
-  <button id="btnSettings" title="Settings">Settings</button>
-  <button id="btnUpdate" title="Check for CodeBox updates">Update<span id="updDot" class="dot hidden"></span></button>
-</div>
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 16 16"><path fill="currentColor" d="M4.5 2.8v10.4c0 .6.6.9 1.1.6l8-5.2a.7.7 0 0 0 0-1.2l-8-5.2c-.5-.3-1.1 0-1.1.6z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 16 16"><path d="M4.5 6.5 8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 16 16"><path d="M1.8 4.2c0-.7.5-1.2 1.2-1.2h3.2l1.5 1.6h5.3c.7 0 1.2.5 1.2 1.2v6.2c0 .7-.5 1.2-1.2 1.2H3c-.7 0-1.2-.5-1.2-1.2z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
+    <symbol id="i-save" viewBox="0 0 16 16"><path d="M3 2.5h8l2.5 2.5v8.5H2.5v-11z M5 2.5v3.5h5v-3.5 M5 13.5v-4h6v4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
+    <symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.8 13.8 5v6L8 14.2 2.2 11V5z M2.2 5 8 8.2 13.8 5 M8 8.2v6" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 16 16"><path d="M10.6 2.2a3.4 3.4 0 0 0-3.9 4.5L2.4 11a1.4 1.4 0 0 0 2 2l4.3-4.3a3.4 3.4 0 0 0 4.5-3.9l-2 2-1.9-.4-.4-1.9z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-update" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 16 16"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-clear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M4.2 11.8l7.6-7.6" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="i-up" viewBox="0 0 16 16"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.8h5.2L12.5 5v9.2h-8.5z M9 1.8V5.2h3.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 16 16"><path d="M8 1.5l1.6 4.9L14.5 8l-4.9 1.6L8 14.5l-1.6-4.9L1.5 8l4.9-1.6z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<header id="titlebar">
+  <div class="brand">
+    <svg viewBox="0 0 64 64" class="logo" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#2f6fed"/><rect x="10" y="16" width="44" height="32" rx="5" fill="#14161b"/><path d="M18 26l7 6-7 6" stroke="#5ad17e" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 39h15" stroke="#e8eaee" stroke-width="3.6" stroke-linecap="round"/></svg>
+    <span>CodeBox</span>
+  </div>
+
+  <div class="seg" id="langSeg" role="radiogroup" aria-label="Language">
+    <button data-lang="python" role="radio" title="Python">Python</button>
+    <button data-lang="java" role="radio" title="Java">Java</button>
+    <button data-lang="c" role="radio" title="C">C</button>
+    <button data-lang="cpp" role="radio" title="C++">C++</button>
+  </div>
+
+  <div class="group">
+    <button id="btnNew" class="tb" title="New file or example (Ctrl+N)"><svg><use href="#i-plus"/></svg><span>New</span><svg class="chev"><use href="#i-chev"/></svg></button>
+    <button id="btnOpen" class="tb icon" title="Open folder"><svg><use href="#i-folder"/></svg></button>
+    <button id="btnSave" class="tb icon" title="Save (Ctrl+S)"><svg><use href="#i-save"/></svg></button>
+  </div>
+
+  <div class="group runbox">
+    <button id="btnRun" class="run" title="Run (F5)"><svg><use href="#i-play"/></svg><span>Run</span><kbd>F5</kbd></button>
+    <button id="btnStop" class="tb icon stop" title="Stop the running program"><svg><use href="#i-stop"/></svg></button>
+  </div>
+
+  <div class="drag"></div>
+
+  <div class="group">
+    <button id="btnPkg" class="tb" title="Install libraries"><svg><use href="#i-box"/></svg><span>Packages</span></button>
+    <button id="btnSetup" class="tb" title="Install Python, Java and C/C++ tools"><svg><use href="#i-wrench"/></svg><span>Setup</span></button>
+    <button id="btnSettings" class="tb icon" title="Settings"><svg><use href="#i-gear"/></svg></button>
+    <button id="btnUpdate" class="tb icon" title="Updates"><svg><use href="#i-update"/></svg><span id="updDot" class="dot hidden"></span></button>
+  </div>
+</header>
+
+<div id="newMenu" class="menu hidden" role="menu"></div>
 
 <div id="main">
-  <div id="side">
+  <aside id="side">
+    <div class="panehead">
+      <span>Explorer</span>
+      <span class="acts">
+        <button id="sideNew" class="mini" title="New file"><svg><use href="#i-plus"/></svg></button>
+        <button id="sideRefresh" class="mini" title="Refresh"><svg><use href="#i-refresh"/></svg></button>
+        <button id="sideOpen" class="mini" title="Open folder"><svg><use href="#i-folder"/></svg></button>
+      </span>
+    </div>
     <div id="wsname"></div>
     <div id="tree"></div>
-  </div>
-  <div id="center">
+  </aside>
+
+  <section id="center">
     <div id="tabs"></div>
     <div id="editor">
       <div id="welcome" class="hidden">
-        <h2>Welcome to CodeBox</h2>
-        <p>Pick a language at the top, then press <b>+ New</b> or choose one of the <b>Examples</b>.</p>
-        <p>Press <b>F5</b> to run your program. Its output appears in the terminal below, and you can type answers there too.</p>
+        <div class="wcol">
+          <h1>Start coding</h1>
+          <p class="wsub">Choose a language to create a new file. Press <kbd>F5</kbd> to run it.</p>
+          <div class="cards" id="langCards"></div>
+          <div class="wfoot">
+            <div>
+              <h3>Shortcuts</h3>
+              <dl class="keys">
+                <dt><kbd>F5</kbd></dt><dd>Run</dd>
+                <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt><dd>Save</dd>
+                <dt><kbd>Ctrl</kbd>+<kbd>N</kbd></dt><dd>New file</dd>
+                <dt><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>-</kbd></dt><dd>Text size</dd>
+                <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Find</dd>
+              </dl>
+            </div>
+            <div>
+              <h3>Tips</h3>
+              <p>Programs that ask questions read your answers from the terminal at the bottom.</p>
+              <p>Missing Python, Java or a compiler? Open <b>Setup</b> and click Install.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="splitter"></div>
-    <div id="termwrap"><div id="term"></div></div>
-  </div>
+    <div id="panel">
+      <div class="panehead">
+        <span>Terminal</span>
+        <span id="runState" class="pill idle">Ready</span>
+        <span class="grow"></span>
+        <span class="acts">
+          <button id="termClear" class="mini" title="Clear terminal"><svg><use href="#i-clear"/></svg></button>
+          <button id="termRestart" class="mini" title="Restart terminal"><svg><use href="#i-refresh"/></svg></button>
+          <button id="termToggle" class="mini" title="Hide or show terminal"><svg><use href="#i-down"/></svg></button>
+        </span>
+      </div>
+      <div id="termwrap"><div id="term"></div></div>
+    </div>
+  </section>
 </div>
-<div id="statusbar"><span id="sbLang"></span><span id="sbPos"></span><span class="grow"></span><span id="sbVer"></span></div>
+
+<footer id="statusbar">
+  <span id="sbRun"><span class="sbdot"></span><span id="sbRunText">Ready</span></span>
+  <span id="sbFolder" title="Project folder"></span>
+  <span class="grow"></span>
+  <span id="sbPos"></span>
+  <span id="sbLang"></span>
+  <span>UTF-8</span>
+  <span id="sbVer"></span>
+</footer>
+
+<div id="toasts" aria-live="polite"></div>
 
 <div id="overlay" class="hidden">
-  <div id="dlg">
-    <div id="dlgHead">
-      <div id="dlgTabs">
-        <button data-pane="python">Python</button>
-        <button data-pane="java">Java</button>
-        <button data-pane="cpp">C / C++</button>
-        <button data-pane="setup">Setup</button>
-        <button data-pane="settings">Settings</button>
-        <button data-pane="update">Update</button>
-      </div>
-      <button id="dlgClose">&#10005;</button>
-    </div>
+  <div id="dlg" role="dialog" aria-modal="true">
+    <nav id="dlgNav">
+      <div class="navlabel">Packages</div>
+      <button data-pane="python"><span class="fi py">Py</span>Python</button>
+      <button data-pane="java"><span class="fi java">J</span>Java</button>
+      <button data-pane="cpp"><span class="fi cpp">C</span>C / C++</button>
+      <div class="navlabel">CodeBox</div>
+      <button data-pane="setup"><svg><use href="#i-wrench"/></svg>Setup</button>
+      <button data-pane="settings"><svg><use href="#i-gear"/></svg>Settings</button>
+      <button data-pane="update"><svg><use href="#i-update"/></svg>Updates</button>
+    </nav>
+    <div id="dlgBody">
+      <button id="dlgClose" class="mini close" title="Close (Esc)"><svg><use href="#i-x"/></svg></button>
 
-    <div class="pane" id="pane-python">
-      <p class="hint">Installs Python libraries with pip. Type one or more names, e.g. <code>requests</code> or <code>numpy pandas</code>.</p>
-      <div class="line">
-        <input id="pyName" placeholder="package name">
-        <button id="pyInstall" class="primary">Install</button>
-        <button id="pyRemove">Uninstall</button>
-        <button id="pyList">Show installed</button>
-        <button id="pyReq">Install requirements.txt</button>
+      <div class="pane" id="pane-python">
+        <h2>Python packages</h2>
+        <p class="hint">Install libraries from PyPI with pip. You can type several names, like <code>numpy pandas</code>.</p>
+        <div class="line">
+          <input id="pyName" placeholder="Package name, e.g. requests">
+          <button id="pyInstall" class="primary">Install</button>
+        </div>
+        <div class="line">
+          <button id="pyRemove">Uninstall</button>
+          <button id="pyList">Show installed</button>
+          <button id="pyReq">Install from requirements.txt</button>
+        </div>
       </div>
-    </div>
 
-    <div class="pane" id="pane-java">
-      <p class="hint">Searches Maven Central and downloads the .jar (plus its dependencies) into your project's <code>libs</code> folder. Run picks them up automatically. You can also type <code>group:artifact:version</code>.</p>
-      <div class="line">
-        <input id="jvName" placeholder="e.g. gson">
-        <button id="jvSearch" class="primary">Search</button>
+      <div class="pane" id="pane-java">
+        <h2>Java libraries</h2>
+        <p class="hint">Search Maven Central. Libraries are saved in your project's <code>libs</code> folder and Run uses them automatically. You can also type <code>group:artifact:version</code>.</p>
+        <div class="line">
+          <input id="jvName" placeholder="Search, e.g. gson">
+          <button id="jvSearch" class="primary">Search</button>
+        </div>
+        <div class="cols">
+          <div><h4>Results</h4><div id="jvResults" class="list"><div class="empty">Search for a library above</div></div></div>
+          <div><h4>In this project</h4><div id="jvInstalled" class="list"></div></div>
+        </div>
       </div>
-      <div class="cols">
-        <div><h4>Results</h4><div id="jvResults" class="list"></div></div>
-        <div><h4>Installed in libs</h4><div id="jvInstalled" class="list"></div></div>
-      </div>
-    </div>
 
-    <div class="pane" id="pane-cpp">
-      <p class="hint">Uses vcpkg for C and C++ libraries. After installing a library, add a line like <code>// link: -lfmt</code> at the top of your file so Run links it.</p>
-      <div class="line">
-        <span id="vcStatus"></span>
-        <button id="vcSetup">Install vcpkg</button>
+      <div class="pane" id="pane-cpp">
+        <h2>C and C++ libraries</h2>
+        <p class="hint">Uses Microsoft vcpkg. After installing, add a line like <code>// link: -lfmt</code> at the top of your file so Run links it.</p>
+        <div class="line"><span id="vcStatus"></span><button id="vcSetup">Install vcpkg</button></div>
+        <div class="line">
+          <input id="vcName" placeholder="Library name, e.g. fmt">
+          <button id="vcInstall" class="primary">Install</button>
+        </div>
+        <div class="line">
+          <button id="vcSearch">Search</button>
+          <button id="vcRemove">Remove</button>
+          <button id="vcList">Show installed</button>
+        </div>
       </div>
-      <div class="line">
-        <input id="vcName" placeholder="e.g. fmt">
-        <button id="vcInstall" class="primary">Install</button>
-        <button id="vcSearch">Search</button>
-        <button id="vcRemove">Remove</button>
-        <button id="vcList">Show installed</button>
+
+      <div class="pane" id="pane-setup">
+        <h2>Setup</h2>
+        <p class="hint">Each language needs its tools installed on this PC. CodeBox installs them for you with winget, which comes with Windows 10 and 11.</p>
+        <div id="setupRows"></div>
+        <div class="line">
+          <button id="setupAll" class="primary">Install everything missing</button>
+          <button id="setupRefresh">Check again</button>
+        </div>
       </div>
-    </div>
 
-    <div class="pane" id="pane-setup">
-      <p class="hint">CodeBox needs each language's tools installed on this PC. Click Install for anything missing (uses winget, which ships with Windows 10 and 11).</p>
-      <div id="setupRows"></div>
-      <div class="line">
-        <button id="setupAll" class="primary">Install everything missing</button>
-        <button id="setupRefresh">Re-check</button>
+      <div class="pane" id="pane-settings">
+        <h2>Settings</h2>
+        <div class="setting"><div><b>Theme</b><small>Colours for the whole app</small></div>
+          <div class="seg small" id="setTheme"><button data-v="dark">Dark</button><button data-v="light">Light</button></div></div>
+        <div class="setting"><div><b>Text size</b><small>Also Ctrl + and Ctrl -</small></div>
+          <div class="range"><input id="setFont" type="range" min="10" max="26" step="1"><span id="setFontVal"></span></div></div>
+        <div class="setting"><div><b>Word wrap</b><small>Wrap long lines instead of scrolling</small></div><label class="switch"><input id="setWrap" type="checkbox"><span></span></label></div>
+        <div class="setting"><div><b>Save automatically</b><small>Saves a second after you stop typing</small></div><label class="switch"><input id="setAuto" type="checkbox"><span></span></label></div>
+        <div class="setting"><div><b>Check for updates on start</b><small>You choose when to install</small></div><label class="switch"><input id="setUpd" type="checkbox"><span></span></label></div>
+        <div class="setting"><div><b>Project folder</b><small id="setWs" class="mono"></small></div><button id="setOpenWs">Show in Explorer</button></div>
       </div>
-    </div>
 
-    <div class="pane" id="pane-settings">
-      <div class="setting"><label>Theme</label>
-        <select id="setTheme"><option value="dark">Dark</option><option value="light">Light</option></select></div>
-      <div class="setting"><label>Font size</label>
-        <input id="setFont" type="range" min="10" max="26" step="1"><span id="setFontVal"></span></div>
-      <div class="setting"><label>Word wrap</label><input id="setWrap" type="checkbox"></div>
-      <div class="setting"><label>Save automatically</label><input id="setAuto" type="checkbox"></div>
-      <div class="setting"><label>Check for updates on start</label><input id="setUpd" type="checkbox"></div>
-      <div class="setting"><label>Project folder</label><span id="setWs" class="mono"></span><button id="setOpenWs">Show in Explorer</button></div>
-    </div>
-
-    <div class="pane" id="pane-update">
-      <div class="updbox">
-        <div class="updver">CodeBox <b id="updCur"></b></div>
-        <div id="updMsg" class="updmsg"></div>
-        <div id="updBarWrap" class="bar hidden"><div id="updBar"></div></div>
+      <div class="pane" id="pane-update">
+        <h2>Updates</h2>
+        <div class="updcard">
+          <svg viewBox="0 0 64 64" class="logo big" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#2f6fed"/><rect x="10" y="16" width="44" height="32" rx="5" fill="#14161b"/><path d="M18 26l7 6-7 6" stroke="#5ad17e" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 39h15" stroke="#e8eaee" stroke-width="3.6" stroke-linecap="round"/></svg>
+          <div class="updinfo">
+            <div class="updver">CodeBox <span id="updCur"></span></div>
+            <div id="updMsg" class="updmsg"></div>
+            <div id="updBarWrap" class="bar hidden"><div id="updBar"></div></div>
+          </div>
+        </div>
         <pre id="updNotes" class="hidden"></pre>
         <div class="line">
           <button id="updCheck" class="primary">Check for updates</button>
           <button id="updDownload" class="primary hidden">Download update</button>
-          <button id="updInstall" class="run hidden">Restart and update</button>
+          <button id="updInstall" class="go hidden">Restart and update</button>
         </div>
-        <p class="hint">Updates download in the background and install in a few seconds. Your files and settings are kept and you don't need to reinstall.</p>
+        <p class="hint">Updates install in a few seconds. Your files and settings are kept and you don't need to reinstall.</p>
+      </div>
+
+      <div id="logwrap">
+        <div class="loghead"><span>Output</span><button id="logClear" class="mini" title="Clear output"><svg><use href="#i-clear"/></svg></button></div>
+        <pre id="log"></pre>
       </div>
     </div>
-
-    <pre id="log"></pre>
   </div>
 </div>
 
 <div id="ask" class="hidden">
-  <div id="askBox">
+  <div id="askBox" role="dialog" aria-modal="true">
     <div id="askTitle"></div>
-    <input id="askInput">
+    <input id="askInput" spellcheck="false">
     <div id="askErr"></div>
     <div class="line end">
       <button id="askCancel">Cancel</button>

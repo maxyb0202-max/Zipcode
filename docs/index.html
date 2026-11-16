@@ -1,428 +1,415 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Zipcode</title>
-<link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
-<link rel="stylesheet" href="styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zipcode for Windows</title>
+<meta name="description" content="Zipcode is a free, easy code editor for Windows. Write and run Python, Java, C and C++ with one key, with a built-in terminal and package manager.">
+<meta name="keywords" content="easy IDE, beginner code editor, Python IDE Windows, Java IDE, C++ IDE, C compiler Windows, free IDE">
+<link rel="canonical" href="https://maxyb0202-max.github.io/codebox/">
+<meta property="og:title" content="Zipcode: easy Python, Java, C and C++ editor for Windows">
+<meta property="og:description" content="Pick a language. Press F5. Free code editor with a built-in terminal and package manager.">
+<meta property="og:url" content="https://maxyb0202-max.github.io/codebox/">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: an exercise-book page with the Zipcode window sitting on it; one wide, heavy headline, everything else quiet. */
+:root {
+  --paper: #f3f6f9;
+  --ink: #0f1c2b;
+  --muted: #566475;
+  --line: #d6dee7;
+  --accent: #0e63c9;
+  --go: #23854a;
+  --card: #ffffff;
+  --win: #1e1f24;
+  --win-2: #2a2c33;
+  --grid: rgba(14, 99, 201, .07);
+  --f-display: "Archivo", "Arial Black", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d141d; --ink: #e8eef5; --muted: #98a6b6; --line: #253244; --accent: #5aa2ff;
+    --go: #3fbf6f; --card: #131c27; --win: #16181d; --win-2: #22252c; --grid: rgba(90, 162, 255, .06);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d141d; --ink: #e8eef5; --muted: #98a6b6; --line: #253244; --accent: #5aa2ff;
+  --go: #3fbf6f; --card: #131c27; --win: #16181d; --win-2: #22252c; --grid: rgba(90, 162, 255, .06);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+body {
+  margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 var(--f-body);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* nav */
+nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; font: 800 20px var(--f-display); font-stretch: 112%; color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+.logo svg { width: 30px; height: 30px; }
+nav ul { list-style: none; display: flex; gap: 24px; margin: 0; padding: 0; flex-wrap: wrap; }
+nav ul a { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px; }
+nav ul a:hover { color: var(--ink); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 48px; align-items: center; padding: 40px 0 72px; }
+h1 {
+  font-family: var(--f-display); font-weight: 900; font-stretch: 125%; line-height: .95; letter-spacing: -.035em;
+  font-size: clamp(42px, 6.2vw, 78px); margin: 0 0 22px; text-wrap: balance;
+}
+h1 .key {
+  display: inline-block; font-stretch: 100%; font-weight: 700; font-size: .62em; letter-spacing: 0; vertical-align: .14em;
+  padding: .06em .34em .1em; border: 2px solid var(--ink); border-bottom-width: 6px; border-radius: .18em; background: var(--card);
+}
+.lede { font-size: 19px; color: var(--muted); max-width: 30em; margin: 0 0 30px; }
+.cta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.btn-dl {
+  display: inline-flex; align-items: center; gap: 12px; padding: 15px 24px 15px 20px; border-radius: 10px;
+  background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 17px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.15), 0 10px 26px -10px var(--accent); transition: transform .15s;
+}
+.btn-dl:hover { transform: translateY(-2px); }
+.btn-dl svg { width: 22px; height: 22px; flex: none; }
+.btn-dl small { display: block; font-weight: 400; opacity: .85; font-size: 13px; }
+.meta { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.meta b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* app window */
+.window { background: var(--win); border-radius: 12px; overflow: hidden; box-shadow: 0 30px 60px -28px rgba(10, 30, 60, .55), 0 0 0 1px rgba(0,0,0,.25); color: #d4d4d4; font: 13px var(--f-mono); }
+.titlebar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--win-2); flex-wrap: wrap; }
+.titlebar .name { font: 700 13px var(--f-body); color: #fff; margin-right: 6px; }
+.langs { display: flex; gap: 4px; flex-wrap: wrap; }
+.langs button {
+  font: 600 12px var(--f-body); color: #c9c9c9; background: #3a3c44; border: 1px solid #4a4c55; border-radius: 6px; padding: 5px 11px; cursor: pointer;
+}
+.langs button[aria-pressed="true"] { background: #0e63c9; border-color: #0e63c9; color: #fff; }
+.run { margin-left: auto; font: 600 12px var(--f-body); color: #fff; background: #2e8b3d; border: 0; border-radius: 6px; padding: 6px 13px; cursor: pointer; }
+.run:hover { background: #37a349; }
+.tabbar { padding: 7px 14px; background: #1a1b20; color: #fff; font-size: 12px; border-bottom: 1px solid #111; }
+pre.code { margin: 0; padding: 14px 0; min-height: 214px; overflow-x: auto; line-height: 1.65; counter-reset: ln; }
+pre.code span.l { display: block; padding: 0 16px 0 0; white-space: pre; }
+pre.code span.l::before { counter-increment: ln; content: counter(ln); display: inline-block; width: 38px; padding-right: 14px; text-align: right; color: #5c606b; }
+.k { color: #569cd6; } .s { color: #ce9178; } .f { color: #dcdcaa; } .c { color: #6a9955; } .n { color: #b5cea8; } .t { color: #4ec9b0; } .p { color: #c586c0; }
+.term { border-top: 5px solid var(--win-2); padding: 10px 14px 14px; min-height: 112px; white-space: pre-wrap; line-height: 1.55; }
+.term .pr { color: #5ec26a; }
+.term .dim { color: #7d818c; }
+.term .in { color: #fff; }
+.caret { display: inline-block; width: 7px; height: 14px; background: #d4d4d4; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* sections */
+section { padding: 64px 0; border-top: 1px solid var(--line); }
+h2 { font: 800 clamp(30px, 3.6vw, 42px)/1.05 var(--f-display); font-stretch: 118%; letter-spacing: -.025em; margin: 0 0 14px; text-wrap: balance; }
+.sub { color: var(--muted); max-width: 40em; margin: 0 0 36px; }
+
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; counter-reset: st; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px 22px 20px; }
+.step::before { counter-increment: st; content: counter(st); display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--ink); color: var(--paper); font: 800 17px var(--f-display); margin-bottom: 14px; }
+.step h3, .feat h3 { margin: 0 0 6px; font: 700 18px var(--f-body); }
+.step p, .feat p { margin: 0; color: var(--muted); font-size: 15.5px; }
+kbd { font: 600 13px var(--f-mono); padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 5px; background: var(--card); color: var(--ink); }
+code { font: 14px var(--f-mono); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+
+.feats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.feat { padding: 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.feat:nth-child(3n) { border-right: 0; }
+.feat:nth-last-child(-n+3) { border-bottom: 0; }
+.feat .tag { display: inline-block; font: 600 11.5px var(--f-mono); color: var(--accent); letter-spacing: .02em; margin-bottom: 8px; }
+
+.pm { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 15.5px; }
+.pm-wrap { overflow-x: auto; }
+.pm th, .pm td { text-align: left; padding: 13px 18px; border-bottom: 1px solid var(--line); }
+.pm th { font: 600 13px var(--f-body); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.pm tr:last-child td { border-bottom: 0; }
+.pm td:first-child { font-weight: 600; white-space: nowrap; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; }
+dl.req { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; }
+dl.req dt { font-weight: 600; }
+dl.req dd { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+details { border-bottom: 1px solid var(--line); padding: 14px 0; }
+details:first-of-type { border-top: 1px solid var(--line); }
+summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 700 20px var(--f-display); color: var(--accent); line-height: 1; }
+details[open] summary::after { content: "\2212"; }
+details p { margin: 10px 0 0; color: var(--muted); font-size: 15.5px; }
+
+.final { text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; background: var(--ink); color: var(--paper); border-radius: 14px; padding: 36px; }
+.final h2 { margin: 0; color: var(--paper); }
+.final p { margin: 6px 0 0; color: color-mix(in srgb, var(--paper) 70%, transparent); }
+footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 16px; }
+  .steps, .two { grid-template-columns: 1fr; }
+  .feats { grid-template-columns: 1fr; }
+  .feat, .feat:nth-child(3n) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .feat:last-child { border-bottom: 0; }
+}
+@media (max-width: 480px) {
+  body { font-size: 16px; }
+  .wrap { padding: 0 16px; }
+  nav ul { gap: 16px; }
+  .final { padding: 26px 22px; }
+}
+</style>
 </head>
 <body>
-<!-- icon sprite -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="i-play" viewBox="0 0 16 16"><path fill="currentColor" d="M4.5 2.8v10.4c0 .6.6.9 1.1.6l8-5.2a.7.7 0 0 0 0-1.2l-8-5.2c-.5-.3-1.1 0-1.1.6z"/></symbol>
-    <symbol id="i-stop" viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
-    <symbol id="i-chev" viewBox="0 0 16 16"><path d="M4.5 6.5 8 10l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-folder" viewBox="0 0 16 16"><path d="M1.8 4.2c0-.7.5-1.2 1.2-1.2h3.2l1.5 1.6h5.3c.7 0 1.2.5 1.2 1.2v6.2c0 .7-.5 1.2-1.2 1.2H3c-.7 0-1.2-.5-1.2-1.2z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
-    <symbol id="i-save" viewBox="0 0 16 16"><path d="M3 2.5h8l2.5 2.5v8.5H2.5v-11z M5 2.5v3.5h5v-3.5 M5 13.5v-4h6v4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
-    <symbol id="i-box" viewBox="0 0 16 16"><path d="M8 1.8 13.8 5v6L8 14.2 2.2 11V5z M2.2 5 8 8.2 13.8 5 M8 8.2v6" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
-    <symbol id="i-wrench" viewBox="0 0 16 16"><path d="M10.6 2.2a3.4 3.4 0 0 0-3.9 4.5L2.4 11a1.4 1.4 0 0 0 2 2l4.3-4.3a3.4 3.4 0 0 0 4.5-3.9l-2 2-1.9-.4-.4-1.9z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
-    <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
-    <symbol id="i-update" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-pen" viewBox="0 0 16 16"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
-    <symbol id="i-x" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
-    <symbol id="i-clear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M4.2 11.8l7.6-7.6" stroke="currentColor" stroke-width="1.3"/></symbol>
-    <symbol id="i-up" viewBox="0 0 16 16"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-down" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.8h5.2L12.5 5v9.2h-8.5z M9 1.8V5.2h3.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></symbol>
-    <symbol id="i-spark" viewBox="0 0 16 16"><path d="M8 1.5l1.6 4.9L14.5 8l-4.9 1.6L8 14.5l-1.6-4.9L1.5 8l4.9-1.6z" fill="currentColor"/></symbol>
-    <symbol id="i-search" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M9.5 9.5l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
-    <symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="4" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="12" cy="4" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="4" cy="12" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M4 5.6v4.8M5.6 4h3.4a1.4 1.4 0 0 1 1.4 1.4V7a1.4 1.4 0 0 1-1.4 1.4H7a1.4 1.4 0 0 0-1.4 1.4v.6" stroke="currentColor" stroke-width="1.3" fill="none"/></symbol>
-    <symbol id="i-warn" viewBox="0 0 16 16"><path d="M8 2l6 11H2z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/><path d="M8 7v3M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
-    <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M8 5v3.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
-    <symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4" cy="4" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="4" cy="12" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="12" cy="6" r="1.6" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M4 5.6V10.4M4 5.6C4 8 12 7.6 12 7.6" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-todo" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M5 8.5l2 2 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-zen" viewBox="0 0 16 16"><path d="M2.5 2.5h4M9.5 2.5h4M2.5 13.5h4M9.5 13.5h4M2.5 2.5v4M2.5 9.5v4M13.5 2.5v4M13.5 9.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
-    <symbol id="i-diff" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="#5ad17e" stroke-width="1.6" stroke-linecap="round"/><path d="M3 4.5h4M9 4.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
-    <symbol id="i-shortcut" viewBox="0 0 16 16"><rect x="2" y="4" width="6" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="10" y="4" width="4" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="2" y="10" width="4" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="8" y="10" width="6" height="4" rx="1.2" stroke="currentColor" stroke-width="1.3" fill="none"/></symbol>
-  </defs>
-</svg>
+<div class="wrap">
+  <nav aria-label="Main">
+    <a class="logo" href="#top">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="12" fill="#0e63c9"/><rect x="9" y="15" width="46" height="34" rx="4" fill="#1e1e1e"/><path d="M17 25l8 7-8 7" stroke="#6bcb77" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 40h17" stroke="#e6e6e6" stroke-width="3.6" stroke-linecap="round"/></svg>
+      Zipcode
+    </a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a class="gh-link" href="#">Source code</a></li>
+    </ul>
+  </nav>
 
-<header id="titlebar">
-  <div class="brand">
-    <svg viewBox="0 0 64 64" class="logo" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#2f6fed"/><rect x="10" y="16" width="44" height="32" rx="5" fill="#14161b"/><path d="M18 26l7 6-7 6" stroke="#5ad17e" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 39h15" stroke="#e8eaee" stroke-width="3.6" stroke-linecap="round"/></svg>
-    <span>Zipcode</span>
-  </div>
-
-  <div class="seg" id="langSeg" role="radiogroup" aria-label="Language">
-    <button data-lang="python" role="radio" title="Python">Python</button>
-    <button data-lang="java" role="radio" title="Java">Java</button>
-    <button data-lang="c" role="radio" title="C">C</button>
-    <button data-lang="cpp" role="radio" title="C++">C++</button>
-  </div>
-
-  <div class="group">
-    <button id="btnNew" class="tb" title="New file or example (Ctrl+N)"><svg><use href="#i-plus"/></svg><span>New</span><svg class="chev"><use href="#i-chev"/></svg></button>
-    <button id="btnOpen" class="tb icon" title="Open folder"><svg><use href="#i-folder"/></svg></button>
-    <button id="btnSave" class="tb icon" title="Save (Ctrl+S)"><svg><use href="#i-save"/></svg></button>
-    <button id="btnQuickOpen" class="tb icon" title="Quick Open (Ctrl+P)"><svg><use href="#i-search"/></svg></button>
-  </div>
-
-  <div class="group runbox">
-    <button id="btnRun" class="run" title="Run (F5)"><svg><use href="#i-play"/></svg><span>Run</span><kbd>F5</kbd></button>
-    <button id="btnStop" class="tb icon stop" title="Stop the running program"><svg><use href="#i-stop"/></svg></button>
-  </div>
-
-  <div class="drag"></div>
-
-  <div class="group">
-    <button id="btnZen" class="tb icon" title="Zen mode — focus view (F11)"><svg><use href="#i-zen"/></svg></button>
-    <button id="btnPkg" class="tb" title="Install libraries"><svg><use href="#i-box"/></svg><span>Packages</span></button>
-    <button id="btnSetup" class="tb" title="Install Python, Java and C/C++ tools"><svg><use href="#i-wrench"/></svg><span>Setup</span></button>
-    <button id="btnSettings" class="tb icon" title="Settings"><svg><use href="#i-gear"/></svg></button>
-    <button id="btnUpdate" class="tb icon" title="Updates"><svg><use href="#i-update"/></svg><span id="updDot" class="dot hidden"></span></button>
-    <button id="btnHelp" class="tb icon" title="Help &amp; Shortcuts reference (opens in browser)"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M6.3 6.1a1.8 1.8 0 0 1 3.4.9c0 1.2-1.7 1.6-1.7 2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".7" fill="currentColor"/></svg></button>
-  </div>
-</header>
-
-<div id="newMenu" class="menu hidden" role="menu"></div>
-
-<!-- Quick Open overlay -->
-<div id="qopen" class="hidden" role="dialog" aria-modal="true">
-  <div id="qopenBox">
-    <div class="qohead">
-      <svg><use href="#i-search"/></svg>
-      <input id="qoInput" placeholder="Type to open a file…" spellcheck="false" autocomplete="off">
-      <kbd>Esc</kbd>
+  <header class="hero" id="top">
+    <div>
+      <h1>Pick a language. Press <span class="key">F5</span>.</h1>
+      <p class="lede">Zipcode is a free, simple code editor for Windows. Write Python, Java, C or C++, run it with one key, and install libraries without touching the command line.</p>
+      <div class="cta">
+        <a class="btn-dl dl-link" href="#">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5l7.4-1v7.1H3V5.5zm0 13l7.4 1v-7H3v6zm8.3 1.1L21 21v-8.4h-9.7v7zm0-15.2v7.2H21V3l-9.7 1.4z"/></svg>
+          <span>Download for Windows<small>Free &middot; Zipcode-Setup.exe</small></span>
+        </a>
+        <div class="meta">Version <b class="ver">1.2.0</b> &middot; <b>84 MB</b><br>Windows 10 and 11, 64-bit</div>
+      </div>
     </div>
-    <div id="qoList"></div>
-    <div id="qoHint">Start typing to search files in the project</div>
-  </div>
+
+    <div class="window" role="region" aria-label="Zipcode preview">
+      <div class="titlebar">
+        <span class="name">Zipcode</span>
+        <div class="langs" role="group" aria-label="Language">
+          <button type="button" data-lang="python" aria-pressed="true">Python</button>
+          <button type="button" data-lang="java" aria-pressed="false">Java</button>
+          <button type="button" data-lang="c" aria-pressed="false">C</button>
+          <button type="button" data-lang="cpp" aria-pressed="false">C++</button>
+        </div>
+        <button type="button" class="run" id="run">&#9654; Run</button>
+      </div>
+      <div class="tabbar" id="file">guess.py</div>
+      <pre class="code" id="code"></pre>
+      <div class="term" id="term" aria-live="polite"></div>
+    </div>
+  </header>
 </div>
 
-<!-- Keyboard shortcuts overlay -->
-<div id="shortcuts" class="hidden" role="dialog" aria-modal="true">
-  <div id="shortcutsBox">
-    <div class="sh-head"><svg><use href="#i-shortcut"/></svg><span>Keyboard Shortcuts</span><button id="shortcutsClose" class="mini"><svg><use href="#i-x"/></svg></button></div>
-    <div class="sh-cols">
-      <div>
-        <h4>Editor</h4>
-        <dl class="keys">
-          <dt><kbd>F5</kbd></dt><dd>Run</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt><dd>Save</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>N</kbd></dt><dd>New file</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>P</kbd></dt><dd>Quick Open</dd>
-          <dt><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Format document</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Find in file</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>H</kbd></dt><dd>Find and replace</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>Go to line</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>Undo</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dt><dd>Redo</dd>
-        </dl>
+<div class="wrap">
+  <section id="how">
+    <h2>From download to running code in three steps</h2>
+    <p class="sub">Zipcode installs the compilers for you, so there's nothing to set up by hand.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Install Zipcode</h3>
+        <p>Run <code>Zipcode-Setup.exe</code>. It installs for your user account only, so it doesn't need admin rights.</p>
       </div>
-      <div>
-        <h4>View</h4>
-        <dl class="keys">
-          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Search in files</dd>
-          <dt><kbd>F11</kbd></dt><dd>Zen mode</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>`</kbd></dt><dd>Show/hide terminal</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>+</kbd>/<kbd>-</kbd></dt><dd>Text size</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>?</kbd></dt><dd>Show shortcuts</dd>
-        </dl>
-        <h4>Multi-cursor</h4>
-        <dl class="keys">
-          <dt><kbd>Alt</kbd>+Click</dt><dd>Add cursor</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Select next match</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></dt><dd>Select all matches</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+↑/↓</dt><dd>Add cursor above/below</dd>
-        </dl>
+      <div class="step">
+        <h3>Click Install everything</h3>
+        <p>The Setup tab finds what's missing (Python, Java JDK 21, gcc/g++) and installs it with Windows' own winget.</p>
       </div>
-    </div>
-  </div>
-</div>
-
-<div id="main">
-  <!-- sidebar rail -->
-  <div id="sideRail">
-    <button id="railExplorer" class="rail on" title="Explorer (files)"><svg><use href="#i-file"/></svg></button>
-    <button id="railSearch" class="rail" title="Find in Files (Ctrl+Shift+F)"><svg><use href="#i-search"/></svg></button>
-    <button id="railGit" class="rail" title="Git"><svg><use href="#i-git"/></svg><span id="gitDot" class="dot hidden"></span></button>
-    <button id="railTodo" class="rail" title="TODO / FIXME"><svg><use href="#i-todo"/></svg><span id="todoDot" class="dot hidden"></span></button>
-  </div>
-
-  <aside id="side">
-    <!-- Explorer panel -->
-    <div id="sideExplorer">
-      <div class="panehead">
-        <span>Explorer</span>
-        <span class="acts">
-          <button id="sideNew" class="mini" title="New file"><svg><use href="#i-plus"/></svg></button>
-          <button id="sideRefresh" class="mini" title="Refresh"><svg><use href="#i-refresh"/></svg></button>
-          <button id="sideOpen" class="mini" title="Open folder"><svg><use href="#i-folder"/></svg></button>
-        </span>
+      <div class="step">
+        <h3>Write and press <kbd>F5</kbd></h3>
+        <p>Pick a language, start from an example or a blank file, and run it. Type answers to your program straight into the terminal.</p>
       </div>
-      <div id="wsname"></div>
-      <div id="tree"></div>
-    </div>
-
-    <!-- Search panel -->
-    <div id="sideSearch" class="hidden">
-      <div class="panehead"><span>Find in Files</span></div>
-      <div class="searchinput">
-        <input id="searchQuery" placeholder="Search in workspace…" spellcheck="false">
-        <button id="searchGo" class="mini" title="Search"><svg><use href="#i-search"/></svg></button>
-      </div>
-      <div id="searchResults"></div>
-    </div>
-
-    <!-- Git panel -->
-    <div id="sideGit" class="hidden">
-      <div class="panehead">
-        <span>Git</span>
-        <span class="acts">
-          <button id="gitDiffBtn" class="mini" title="Diff selected file"><svg><use href="#i-diff"/></svg></button>
-          <button id="gitRefresh" class="mini" title="Refresh"><svg><use href="#i-refresh"/></svg></button>
-        </span>
-      </div>
-      <div id="gitBranch" class="gitbranch"></div>
-      <div id="gitFiles"></div>
-      <div id="gitActions">
-        <input id="gitMsg" placeholder="Commit message (Ctrl+Enter)…" spellcheck="false">
-        <div class="git-btn-row">
-          <button id="gitStageAll">Stage all</button>
-          <button id="gitCommitBtn" class="primary">Commit</button>
-          <button id="gitPushBtn">Push</button>
-        </div>
-        <div id="gitLog"></div>
-      </div>
-    </div>
-
-    <!-- TODO panel -->
-    <div id="sideTodo" class="hidden">
-      <div class="panehead">
-        <span>TODO / FIXME</span>
-        <span class="acts">
-          <button id="todoRefresh" class="mini" title="Rescan"><svg><use href="#i-refresh"/></svg></button>
-        </span>
-      </div>
-      <div id="todoResults"></div>
-    </div>
-  </aside>
-
-  <section id="center">
-    <div id="tabbar">
-      <div id="tabs"></div>
-      <div id="breadcrumb"></div>
-    </div>
-    <div id="editor">
-      <!-- Welcome screen -->
-      <div id="welcome" class="hidden">
-        <div class="wcol">
-          <div class="wlogo">
-            <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#2f6fed"/><rect x="10" y="16" width="44" height="32" rx="5" fill="#14161b"/><path d="M18 26l7 6-7 6" stroke="#5ad17e" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 39h15" stroke="#e8eaee" stroke-width="3.6" stroke-linecap="round"/></svg>
-            <div><h1>Zipcode</h1><p class="wsub">The simple IDE for Python, Java, C and C++</p></div>
-          </div>
-
-          <div class="wactions">
-            <button id="wNewFile" class="wact primary"><svg><use href="#i-plus"/></svg><span>New file</span></button>
-            <button id="wOpenFolder" class="wact"><svg><use href="#i-folder"/></svg><span>Open folder</span></button>
-            <button id="wQuickOpen" class="wact"><svg><use href="#i-search"/></svg><span>Quick Open <kbd>Ctrl+P</kbd></span></button>
-          </div>
-
-          <div class="wrecent" id="wRecentSection">
-            <h3>Recent projects</h3>
-            <div id="wRecentList"></div>
-          </div>
-
-          <div class="wlangs">
-            <h3>Start a new project</h3>
-            <div class="cards" id="langCards"></div>
-          </div>
-
-          <div class="wfoot">
-            <div>
-              <h3>Quick shortcuts</h3>
-              <dl class="keys">
-                <dt><kbd>F5</kbd></dt><dd>Run</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>P</kbd></dt><dd>Quick Open</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></dt><dd>Search</dd>
-                <dt><kbd>F11</kbd></dt><dd>Zen mode</dd>
-                <dt><kbd>Ctrl</kbd>+<kbd>?</kbd></dt><dd>All shortcuts</dd>
-              </dl>
-            </div>
-            <div>
-              <h3>Tips</h3>
-              <p>Programs that ask questions read your answers from the terminal at the bottom.</p>
-              <p>Missing Python, Java or a compiler? Open <b>Setup</b> and click Install.</p>
-              <p>Use <b>Alt+Shift+F</b> to auto-format your code instantly.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div id="splitter"></div>
-    <div id="panel">
-      <div class="panehead">
-        <div class="panel-tabs">
-          <button id="tabTerminal" class="paneltab on">Terminal</button>
-          <button id="tabProblems" class="paneltab">Problems <span id="problemCount" class="pbadge hidden">0</span></button>
-        </div>
-        <span id="runState" class="pill idle">Ready</span>
-        <span class="grow"></span>
-        <span class="acts">
-          <button id="termClear" class="mini" title="Clear terminal"><svg><use href="#i-clear"/></svg></button>
-          <button id="termRestart" class="mini" title="Restart terminal"><svg><use href="#i-refresh"/></svg></button>
-          <button id="termToggle" class="mini" title="Hide or show terminal"><svg><use href="#i-down"/></svg></button>
-        </span>
-      </div>
-      <div id="termwrap"><div id="term"></div></div>
-      <div id="problemsPane" class="hidden"></div>
     </div>
   </section>
-</div>
 
-<!-- Zen exit button -->
-<button id="zenExit" class="hidden" title="Exit Zen mode (F11 or Esc)"><svg><use href="#i-zen"/></svg></button>
+  <section id="features">
+    <h2>Everything a first project needs</h2>
+    <p class="sub">The same editor engine as Visual Studio Code, without the setup.</p>
+    <div class="feats">
+      <div class="feat"><span class="tag">EDITOR</span><h3>Real code editor</h3><p>Syntax colours, auto-indent, find and replace, and multiple tabs. Saves as you type.</p></div>
+      <div class="feat"><span class="tag">RUN</span><h3>One-key run</h3><p>Compiles C and C++ automatically and runs Java and Python files directly. Stop a stuck program with one click.</p></div>
+      <div class="feat"><span class="tag">SHELL</span><h3>Built-in terminal</h3><p>A normal Windows command prompt opened in your project folder, with up-arrow history and copy and paste.</p></div>
+      <div class="feat"><span class="tag">PACKAGES</span><h3>Library manager</h3><p>Search and install libraries for each language from one window, no commands to remember.</p></div>
+      <div class="feat"><span class="tag">EXAMPLES</span><h3>Ready-made examples</h3><p>A guessing game, a calculator and times tables in all four languages, ready to run and change.</p></div>
+      <div class="feat"><span class="tag">UPDATE</span><h3>Updates itself</h3><p>New versions download in the background. Press Restart and you're up to date, with no reinstalling.</p></div>
+    </div>
+  </section>
 
-<footer id="statusbar">
-  <span id="sbRun"><span class="sbdot"></span><span id="sbRunText">Ready</span></span>
-  <span id="sbBranch" class="hidden"></span>
-  <span id="sbFolder" title="Project folder"></span>
-  <span class="grow"></span>
-  <span id="sbCount" title="Word and line count"></span>
-  <span id="sbPos"></span>
-  <span id="sbLang"></span>
-  <span>UTF-8</span>
-  <span id="sbVer"></span>
-</footer>
+  <section id="packages">
+    <h2>Libraries for every language</h2>
+    <p class="sub">Open <b>Packages</b>, type a name, press Install. Zipcode uses each language's standard library source.</p>
+    <div class="pm-wrap">
+      <table class="pm">
+        <thead><tr><th>Language</th><th>Installs from</th><th>Try</th></tr></thead>
+        <tbody>
+          <tr><td>Python</td><td>pip and PyPI, plus <code>requirements.txt</code></td><td><code>requests</code>, <code>numpy</code></td></tr>
+          <tr><td>Java</td><td>Maven Central; jars go in your project's <code>libs</code> folder</td><td><code>gson</code>, <code>commons-lang3</code></td></tr>
+          <tr><td>C and C++</td><td>Microsoft vcpkg</td><td><code>fmt</code>, <code>nlohmann-json</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-<div id="toasts" aria-live="polite"></div>
-
-<div id="overlay" class="hidden">
-  <div id="dlg" role="dialog" aria-modal="true">
-    <nav id="dlgNav">
-      <div class="navlabel">Packages</div>
-      <button data-pane="python"><span class="fi py">Py</span>Python</button>
-      <button data-pane="java"><span class="fi java">J</span>Java</button>
-      <button data-pane="cpp"><span class="fi cpp">C</span>C / C++</button>
-      <div class="navlabel">Zipcode</div>
-      <button data-pane="setup"><svg><use href="#i-wrench"/></svg>Setup</button>
-      <button data-pane="settings"><svg><use href="#i-gear"/></svg>Settings</button>
-      <button data-pane="update"><svg><use href="#i-update"/></svg>Updates</button>
-    </nav>
-    <div id="dlgBody">
-      <button id="dlgClose" class="mini close" title="Close (Esc)"><svg><use href="#i-x"/></svg></button>
-
-      <div class="pane" id="pane-python">
-        <h2>Python packages</h2>
-        <p class="hint">Install libraries from PyPI with pip. You can type several names, like <code>numpy pandas</code>.</p>
-        <div class="line">
-          <input id="pyName" placeholder="Package name, e.g. requests">
-          <button id="pyInstall" class="primary">Install</button>
-        </div>
-        <div class="line">
-          <button id="pyRemove">Uninstall</button>
-          <button id="pyList">Show installed</button>
-          <button id="pyReq">Install from requirements.txt</button>
-        </div>
+  <section id="faq">
+    <div class="two">
+      <div>
+        <h2>System requirements</h2>
+        <dl class="req">
+          <dt>Windows</dt><dd>10 or 11, 64-bit</dd>
+          <dt>Download</dt><dd>84 MB</dd>
+          <dt>Disk space</dt><dd>About 300 MB, plus the languages you install</dd>
+          <dt>Memory</dt><dd>4 GB RAM or more</dd>
+          <dt>Internet</dt><dd>Needed for setup, libraries and updates</dd>
+        </dl>
       </div>
-
-      <div class="pane" id="pane-java">
-        <h2>Java libraries</h2>
-        <p class="hint">Search Maven Central. Libraries are saved in your project's <code>libs</code> folder and Run uses them automatically. You can also type <code>group:artifact:version</code>.</p>
-        <div class="line">
-          <input id="jvName" placeholder="Search, e.g. gson">
-          <button id="jvSearch" class="primary">Search</button>
-        </div>
-        <div class="cols">
-          <div><h4>Results</h4><div id="jvResults" class="list"><div class="empty">Search for a library above</div></div></div>
-          <div><h4>In this project</h4><div id="jvInstalled" class="list"></div></div>
-        </div>
-      </div>
-
-      <div class="pane" id="pane-cpp">
-        <h2>C and C++ libraries</h2>
-        <p class="hint">Uses Microsoft vcpkg. After installing, add a line like <code>// link: -lfmt</code> at the top of your file so Run links it.</p>
-        <div class="line"><span id="vcStatus"></span><button id="vcSetup">Install vcpkg</button></div>
-        <div class="line">
-          <input id="vcName" placeholder="Library name, e.g. fmt">
-          <button id="vcInstall" class="primary">Install</button>
-        </div>
-        <div class="line">
-          <button id="vcSearch">Search</button>
-          <button id="vcRemove">Remove</button>
-          <button id="vcList">Show installed</button>
-        </div>
-      </div>
-
-      <div class="pane" id="pane-setup">
-        <h2>Setup</h2>
-        <p class="hint">Each language needs its tools installed on this PC. Zipcode installs them for you with winget, which comes with Windows 10 and 11.</p>
-        <div id="setupRows"></div>
-        <div class="line">
-          <button id="setupAll" class="primary">Install everything missing</button>
-          <button id="setupRefresh">Check again</button>
-        </div>
-      </div>
-
-      <div class="pane" id="pane-settings">
-        <h2>Settings</h2>
-        <div class="setting"><div><b>Theme</b><small>Colours for the whole app</small></div>
-          <div class="seg small" id="setTheme">
-            <button data-v="dark">Dark</button>
-            <button data-v="light">Light</button>
-            <button data-v="monokai">Monokai</button>
-            <button data-v="nord">Nord</button>
-            <button data-v="github-light">GitHub</button>
-          </div>
-        </div>
-        <div class="setting"><div><b>Text size</b><small>Also Ctrl + and Ctrl -</small></div>
-          <div class="range"><input id="setFont" type="range" min="10" max="26" step="1"><span id="setFontVal"></span></div></div>
-        <div class="setting"><div><b>Word wrap</b><small>Wrap long lines instead of scrolling</small></div><label class="switch"><input id="setWrap" type="checkbox"><span></span></label></div>
-        <div class="setting"><div><b>Minimap</b><small>Show a small code overview on the right</small></div><label class="switch"><input id="setMinimap" type="checkbox"><span></span></label></div>
-        <div class="setting"><div><b>Format on save</b><small>Auto-format code when you save</small></div><label class="switch"><input id="setFmtSave" type="checkbox"><span></span></label></div>
-        <div class="setting"><div><b>Save automatically</b><small>Saves a second after you stop typing</small></div><label class="switch"><input id="setAuto" type="checkbox"><span></span></label></div>
-        <div class="setting"><div><b>Check for updates on start</b><small>You choose when to install</small></div><label class="switch"><input id="setUpd" type="checkbox"><span></span></label></div>
-        <div class="setting"><div><b>Project folder</b><small id="setWs" class="mono"></small></div><button id="setOpenWs">Show in Explorer</button></div>
-        <div class="setting"><div><b>Recent projects</b><small>Switch quickly between workspaces</small></div></div>
-        <div id="recentList"></div>
-      </div>
-
-      <div class="pane" id="pane-update">
-        <h2>Updates</h2>
-        <div class="updcard">
-          <svg viewBox="0 0 64 64" class="logo big" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#2f6fed"/><rect x="10" y="16" width="44" height="32" rx="5" fill="#14161b"/><path d="M18 26l7 6-7 6" stroke="#5ad17e" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 39h15" stroke="#e8eaee" stroke-width="3.6" stroke-linecap="round"/></svg>
-          <div class="updinfo">
-            <div class="updver">Zipcode <span id="updCur"></span></div>
-            <div id="updMsg" class="updmsg"></div>
-            <div id="updBarWrap" class="bar hidden"><div id="updBar"></div></div>
-          </div>
-        </div>
-        <pre id="updNotes" class="hidden"></pre>
-        <div class="line">
-          <button id="updCheck" class="primary">Check for updates</button>
-          <button id="updDownload" class="primary hidden">Download update</button>
-          <button id="updInstall" class="go hidden">Restart and update</button>
-        </div>
-        <p class="hint">Updates install in a few seconds. Your files and settings are kept and you don't need to reinstall.</p>
-      </div>
-
-      <div id="logwrap">
-        <div class="loghead"><span>Output</span><button id="logClear" class="mini" title="Clear output"><svg><use href="#i-clear"/></svg></button></div>
-        <pre id="log"></pre>
+      <div>
+        <h2>Questions</h2>
+        <details>
+          <summary>Windows says it "protected your PC". Is that normal?</summary>
+          <p>Yes. Zipcode is new and isn't code-signed yet, so SmartScreen shows a warning the first time. Click <b>More info</b>, then <b>Run anyway</b>.</p>
+        </details>
+        <details>
+          <summary>Is it really free?</summary>
+          <p>Yes. Zipcode is free and open source under the MIT licence.</p>
+        </details>
+        <details>
+          <summary>Where are my files saved?</summary>
+          <p>In <code>Documents\Zipcode</code> by default. Use <b>Open Folder</b> to work anywhere else.</p>
+        </details>
+        <details>
+          <summary>How do I update?</summary>
+          <p>Open the <b>Update</b> tab and press <b>Check for updates</b>. Zipcode also checks on its own when it starts. A green dot appears when a new version is ready.</p>
+        </details>
+        <details>
+          <summary>How do I uninstall it?</summary>
+          <p>Settings, then Apps, then Zipcode, then Uninstall. Your code in <code>Documents\Zipcode</code> is left alone.</p>
+        </details>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<div id="ask" class="hidden">
-  <div id="askBox" role="dialog" aria-modal="true">
-    <div id="askTitle"></div>
-    <input id="askInput" spellcheck="false">
-    <div id="askErr"></div>
-    <div class="line end">
-      <button id="askCancel">Cancel</button>
-      <button id="askOk" class="primary">OK</button>
+  <section>
+    <div class="final">
+      <div>
+        <h2>Start coding in a few minutes</h2>
+        <p>Free for Windows 10 and 11.</p>
+      </div>
+      <a class="btn-dl dl-link" href="#">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5l7.4-1v7.1H3V5.5zm0 13l7.4 1v-7H3v6zm8.3 1.1L21 21v-8.4h-9.7v7zm0-15.2v7.2H21V3l-9.7 1.4z"/></svg>
+        <span>Download Zipcode<small>Version <span class="ver">1.2.0</span></small></span>
+      </a>
     </div>
-  </div>
+  </section>
+
+  <footer>
+    <span>Zipcode &middot; MIT licence</span>
+    <span><a class="gh-link" href="#">Source code and release notes</a></span>
+  </footer>
 </div>
 
-<script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
-<script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
-<script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
-<script src="renderer.js"></script>
+<script>
+(function () {
+  // ---- Where the downloads live. Change this one line if the repository moves.
+  var REPO = 'maxyb0202-max/codebox';
+  var VERSION = '1.2.0';
+
+  var gh = 'https://github.com/' + REPO;
+  document.querySelectorAll('.dl-link').forEach(function (a) { a.href = gh + '/releases/latest/download/Zipcode-Setup.exe'; });
+  document.querySelectorAll('.gh-link').forEach(function (a) { a.href = gh; });
+  document.querySelectorAll('.ver').forEach(function (e) { e.textContent = VERSION; });
+
+  var DEMOS = {
+    python: {
+      file: 'guess.py', cmd: 'python guess.py',
+      code: '<span class="k">import</span> random\n\nsecret = random.<span class="f">randint</span>(<span class="n">1</span>, <span class="n">10</span>)\nguess = <span class="f">int</span>(<span class="f">input</span>(<span class="s">"Guess 1-10: "</span>))\n\n<span class="p">if</span> guess == secret:\n    <span class="f">print</span>(<span class="s">"You got it!"</span>)\n<span class="p">else</span>:\n    <span class="f">print</span>(<span class="s">f"Nope, it was </span>{secret}<span class="s">"</span>)',
+      out: [['Guess 1-10: ', ''], ['', '7'], ['You got it!\n', '']]
+    },
+    java: {
+      file: 'Main.java', cmd: 'java Main.java',
+      code: '<span class="k">public class</span> <span class="t">Main</span> {\n    <span class="k">public static void</span> <span class="f">main</span>(<span class="t">String</span>[] args) {\n        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">1</span>; i &lt;= <span class="n">3</span>; i++) {\n            <span class="t">System</span>.out.<span class="f">println</span>(<span class="s">"Hello #"</span> + i);\n        }\n    }\n}',
+      out: [['Hello #1\nHello #2\nHello #3\n', '']]
+    },
+    c: {
+      file: 'hello.c', cmd: 'gcc hello.c -o hello && hello',
+      code: '<span class="p">#include</span> <span class="s">&lt;stdio.h&gt;</span>\n\n<span class="k">int</span> <span class="f">main</span>(<span class="k">void</span>) {\n    <span class="k">int</span> total = <span class="n">0</span>;\n    <span class="p">for</span> (<span class="k">int</span> i = <span class="n">1</span>; i &lt;= <span class="n">100</span>; i++) total += i;\n    <span class="f">printf</span>(<span class="s">"1 + 2 + ... + 100 = %d\\n"</span>, total);\n    <span class="p">return</span> <span class="n">0</span>;\n}',
+      out: [['1 + 2 + ... + 100 = 5050\n', '']]
+    },
+    cpp: {
+      file: 'shopping.cpp', cmd: 'g++ shopping.cpp -o shopping && shopping',
+      code: '<span class="p">#include</span> <span class="s">&lt;iostream&gt;</span>\n<span class="p">#include</span> <span class="s">&lt;vector&gt;</span>\n\n<span class="k">int</span> <span class="f">main</span>() {\n    std::<span class="t">vector</span>&lt;std::<span class="t">string</span>&gt; list{<span class="s">"milk"</span>, <span class="s">"eggs"</span>, <span class="s">"bread"</span>};\n    <span class="p">for</span> (<span class="k">auto</span>&amp; item : list)\n        std::cout &lt;&lt; <span class="s">"- "</span> &lt;&lt; item &lt;&lt; <span class="s">"\\n"</span>;\n}',
+      out: [['- milk\n- eggs\n- bread\n', '']]
+    }
+  };
+
+  var codeEl = document.getElementById('code'), termEl = document.getElementById('term'), fileEl = document.getElementById('file');
+  var cur = 'python', timer = null;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var PROMPT = '<span class="pr">C:\\Users\\you\\Documents\\Zipcode&gt;</span> ';
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function lines(html) { return html.split('\n').map(function (l) { return '<span class="l">' + (l || ' ') + '</span>'; }).join(''); }
+
+  function finalOutput(d) {
+    return d.out.map(function (o) { return esc(o[0]) + (o[1] ? '<span class="in">' + esc(o[1]) + '</span>\n' : ''); }).join('');
+  }
+  function rest(d) {
+    return '<span class="dim">' + esc(d.cmd) + '</span>\n' + finalOutput(d) + PROMPT + '<span class="caret"></span>';
+  }
+
+  function show(lang, animate) {
+    cur = lang;
+    var d = DEMOS[lang];
+    document.querySelectorAll('.langs button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.lang === lang)); });
+    fileEl.textContent = d.file;
+    codeEl.innerHTML = lines(d.code);
+    if (animate) play(); else termEl.innerHTML = rest(d);
+  }
+
+  function play() {
+    clearTimeout(timer);
+    var d = DEMOS[cur];
+    if (reduce) { termEl.innerHTML = rest(d); return; }
+    var html = '<span class="dim">' + esc(d.cmd) + '</span>\n';
+    termEl.innerHTML = html + '<span class="caret"></span>';
+    var parts = [];
+    d.out.forEach(function (o) {
+      if (o[0]) parts.push({ t: o[0], cls: '', speed: 14 });
+      if (o[1]) parts.push({ t: o[1] + '\n', cls: 'in', speed: 160, pause: 500 });
+    });
+    var pi = 0, ci = 0, built = html;
+    function step() {
+      if (pi >= parts.length) { termEl.innerHTML = built + PROMPT + '<span class="caret"></span>'; return; }
+      var p = parts[pi];
+      if (ci === 0 && p.pause) { var hold = p.pause; p.pause = 0; timer = setTimeout(step, hold); return; }
+      var ch = esc(p.t[ci]);
+      built += p.cls ? '<span class="' + p.cls + '">' + ch + '</span>' : ch;
+      ci++;
+      if (ci >= p.t.length) { pi++; ci = 0; }
+      termEl.innerHTML = built + '<span class="caret"></span>';
+      timer = setTimeout(step, p.speed);
+    }
+    timer = setTimeout(step, 450);
+  }
+
+  document.querySelectorAll('.langs button').forEach(function (b) {
+    b.addEventListener('click', function () { show(b.dataset.lang, true); });
+  });
+  document.getElementById('run').addEventListener('click', play);
+  show('python', false);
+})();
+</script>
 </body>
 </html>

@@ -2,7 +2,9 @@
 /* ── Zipcode v1.4.2 renderer ─────────────────────────────────── */
 
 // Support both window.cbx (v1.4+) and window.api (legacy fallback)
-const cbx = window.cbx || window.api || {};
+// Use var — contextBridge.exposeInMainWorld('cbx') creates a global binding,
+// and const/let would throw "already declared" in V8's strict mode.
+var cbx = window.cbx || window.api || {};
 
 /* ── Monaco ──────────────────────────────────────────────────── */
 // Use absolute URL so Monaco AMD + workers resolve correctly inside the ASAR

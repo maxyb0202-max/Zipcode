@@ -1,10 +1,10 @@
 'use strict';
 /* ── Zipcode v1.4.2 renderer ─────────────────────────────────── */
 
-// Support both window.cbx (v1.4+) and window.api (legacy fallback)
-// Use var — contextBridge.exposeInMainWorld('cbx') creates a global binding,
-// and const/let would throw "already declared" in V8's strict mode.
-var cbx = window.cbx || window.api || {};
+// contextBridge.exposeInMainWorld('cbx') makes window.cbx non-configurable,
+// so declaring const/var cbx at global scope throws "already declared".
+// Use a private name __api to avoid the clash.
+const __api = window.cbx || window.api || {};
 
 /* ── Monaco ──────────────────────────────────────────────────── */
 // Use absolute URL so Monaco AMD + workers resolve correctly inside the ASAR
@@ -60,8 +60,8 @@ require(['vs/editor/editor.main'], () => {
     loadSplitPref();
     wire();
     showWelcome();
-    if (settings.updCheck && cbx.updGet) cbx.updGet();
-    if (cbx.getVersion) cbx.getVersion().then(v => {
+    if (settings.updCheck && __api.updGet) __api.updGet();
+    if (__api.getVersion) __api.getVersion().then(v => {
       document.getElementById('sbVer').textContent = 'v' + v;
       document.getElementById('updCur').textContent = v;
     });
@@ -338,7 +338,7 @@ function updateBreadcrumb() {
 async function openFile(filePath) {
   const existing = tabs.find(t => t.path === filePath);
   if (existing) { activateTab(existing.id); return; }
-  const content = await cbx.readFile(filePath);
+  const content = await __api.readFile(filePath);
   if (content === null) { toast('Could not read file', true); return; }
   const name = filePath.split(/[/\\]/).pop();
   const lang = detectLang(name);
@@ -350,12 +350,12 @@ async function saveFile(path) {
   if (settings.formatOnSave) {
     await editor.getAction('editor.action.formatDocument')?.run();
   }
-  const ok = await cbx.writeFile(fp, editor.getValue());
+  const ok = await __api.writeFile(fp, editor.getValue());
   if (ok) { markClean(activeTabId); toast('Saved'); updateWordCount(); parseAndUpdateProblems(); }
   else toast('Save failed', true);
 }
 async function saveFileAs() {
-  const fp = await cbx.saveAs(currentFile || null);
+  const fp = await __api.saveAs(currentFile || null);
   if (!fp) return;
   currentFile = fp;
   const tab = tabs.find(t => t.id === activeTabId);
@@ -364,7 +364,7 @@ async function saveFileAs() {
   updateBreadcrumb();
 }
 async function openFolder(dir) {
-  if (!dir) dir = await cbx.openFolder();
+  if (!dir) dir = await __api.openFolder();
   if (!dir) return;
   ws = dir;
   addRecent(dir);
@@ -378,7 +378,7 @@ async function openFolder(dir) {
 }
 async function refreshTree() {
   if (!ws) return;
-  const items = await cbx.readDir(ws);
+  const items = await __api.readDir(ws);
   const tree = q('#tree');
   if (!items) { tree.innerHTML = '<div class="treeItem" style="color:var(--red)">Cannot read folder</div>'; return; }
   renderTreeItems(tree, items, ws, 0);
@@ -401,7 +401,7 @@ function renderTreeItems(container, items, base, depth) {
         el._open = true;
         const sub = document.createElement('div');
         el._sub = sub;
-        const children = await cbx.readDir(fp);
+        const children = await __api.readDir(fp);
         if (children) renderTreeItems(sub, children, fp, depth + 1);
         el.after(sub);
       });
@@ -424,7 +424,7 @@ function showQuickOpen() {
   q('#qoHint').classList.remove('hidden');
   q('#qoInput').focus();
   if (!qoFiles.length) {
-    cbx.quickOpen(ws).then(files => { qoFiles = files || []; renderQoList(''); });
+    __api.quickOpen(ws).then(files => { qoFiles = files || []; renderQoList(''); });
   } else {
     renderQoList('');
   }
@@ -481,7 +481,7 @@ function highlightFuzz(html, query) {
 async function runSearch() {
   const q2 = q('#searchQuery').value.trim();
   if (!q2 || !ws) return;
-  const res = await cbx.searchInFiles(ws, q2);
+  const res = await __api.searchInFiles(ws, q2);
   const container = q('#searchResults');
   if (!res || !res.length) { container.innerHTML = '<div class="srFile" style="color:var(--text3)">No results</div>'; return; }
   const grouped = {};
@@ -512,7 +512,7 @@ async function runSearch() {
 ══════════════════════════════════════════════════════════════════*/
 async function refreshGitBranch() {
   if (!ws) return;
-  const info = await cbx.gitStatus(ws);
+  const info = await __api.gitStatus(ws);
   if (!info) return;
   const branch = info.branch || 'detached';
   q('#gitBranch').textContent = branch;
@@ -537,7 +537,7 @@ function renderGitFiles(files) {
 }
 async function refreshGitPanel() {
   refreshGitBranch();
-  const info = await cbx.gitLog(ws);
+  const info = await __api.gitLog(ws);
   const logEl = q('#gitLog');
   logEl.innerHTML = (info || []).map(c =>
     `<div class="gitCommit"><span class="hash">${esc(c.hash.slice(0,7))}</span><span class="msg">${esc(c.msg)}</span></div>`
@@ -548,20 +548,20 @@ async function doGitCommit() {
   if (!msg) { toast('Enter a commit message', true); return; }
   const checkedFiles = [...q('#gitFiles').querySelectorAll('input:checked')].map(x => x.dataset.file);
   if (checkedFiles.length) {
-    for (const f of checkedFiles) await cbx.gitStage(ws, f);
+    for (const f of checkedFiles) await __api.gitStage(ws, f);
   }
-  const ok = await cbx.gitCommit(ws, msg);
+  const ok = await __api.gitCommit(ws, msg);
   if (ok) { q('#gitMsg').value = ''; toast('Committed'); refreshGitPanel(); }
   else toast('Commit failed', true);
 }
 async function doGitPush() {
   toast('Pushing…');
-  const ok = await cbx.gitPush(ws);
+  const ok = await __api.gitPush(ws);
   if (ok) toast('Pushed'); else toast('Push failed', true);
 }
 async function doGitDiff() {
   if (!ws) return;
-  const diff = await cbx.gitDiff(ws, currentFile);
+  const diff = await __api.gitDiff(ws, currentFile);
   if (!diff) { toast('No diff'); return; }
   const tab = tabs.find(t => t.id === activeTabId);
   const name = tab ? 'DIFF: ' + tab.name : 'Diff';
@@ -577,7 +577,7 @@ async function doGitDiff() {
 async function refreshTodo() {
   if (!ws) { toast('Open a folder first'); return; }
   q('#todoResults').innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text3)">Scanning…</div>';
-  const results = await cbx.todoScan(ws);
+  const results = await __api.todoScan(ws);
   const dot = q('#todoDot');
   dot.classList.toggle('hidden', !(results && results.length));
   if (!results || !results.length) {
@@ -674,30 +674,30 @@ function initTerminal() {
   terminalObj.open(document.getElementById('term'));
   fitAddon.fit();
   terminalObj.writeln('\x1b[32mZipcode v1.4.2 — terminal ready\x1b[0m');
-  if (cbx.onTermOutput) cbx.onTermOutput((data) => {
+  if (__api.onTermOutput) __api.onTermOutput((data) => {
     terminalObj.write(data);
     updateProblems(data);
     q('#problemsPane').dataset.lastText = (q('#problemsPane').dataset.lastText || '') + data;
-  }); else if (cbx.on) cbx.on('shell:data', data => {
+  }); else if (__api.on) __api.on('shell:data', data => {
     terminalObj.write(data);
     updateProblems(data);
     q('#problemsPane').dataset.lastText = (q('#problemsPane').dataset.lastText || '') + data;
   });
-  if (cbx.onRunFinished) cbx.onRunFinished((code) => {
+  if (__api.onRunFinished) __api.onRunFinished((code) => {
     stopRunTimer();
     const ok = code === 0;
     terminalObj.writeln(`\x1b[${ok ? '32' : '31'}m\n── Exited with code ${code} ──\x1b[0m`);
     q('#btnRun').disabled = false;
     q('#btnStop').disabled = true;
     setSbRun(ok ? 'idle' : 'error', ok ? 'Ready' : 'Error');
-  }); else if (cbx.on) cbx.on('shell:exit', code => {
+  }); else if (__api.on) __api.on('shell:exit', code => {
     stopRunTimer();
     const ok = code === 0;
     terminalObj.writeln(`\x1b[${ok ? '32' : '31'}m\n── Exited with code ${code} ──\x1b[0m`);
     q('#btnRun').disabled = false; q('#btnStop').disabled = true;
     setSbRun(ok ? 'idle' : 'error', ok ? 'Ready' : 'Error');
   });
-  terminalObj.onData(d => cbx.termInput ? cbx.termInput(d) : cbx.shellWrite && cbx.shellWrite(d));
+  terminalObj.onData(d => __api.termInput ? __api.termInput(d) : __api.shellWrite && __api.shellWrite(d));
 }
 function termTheme() {
   const dark = { background: '#14161b', foreground: '#c8ccd8', cursor: '#7c8498', selectionBackground: '#1b2d50', black: '#14161b', red: '#f26a6a', green: '#5ad17e', yellow: '#e8d060', blue: '#7eb8f5', magenta: '#b48df0', cyan: '#60c8d8', white: '#c8ccd8', brightBlack: '#4a5068', brightRed: '#ff8080', brightGreen: '#76e89a', brightYellow: '#ffe080', brightBlue: '#90c8ff', brightMagenta: '#c8a0ff', brightCyan: '#78e0f0', brightWhite: '#e8eaee' };
@@ -719,7 +719,7 @@ async function runCode() {
   terminalObj.writeln(`\x1b[36m\n── Run: ${currentFile.split(/[/\\]/).pop()} ──\x1b[0m`);
   startRunTimer(currentFile.split(/[/\\]/).pop());
   setSbRun('running', 'Running…');
-  cbx.runFile(currentFile, currentLang);
+  __api.runFile(currentFile, currentLang);
 }
 function startRunTimer(name) {
   runStart = Date.now();
@@ -895,7 +895,7 @@ function hideOverlay() {
 ══════════════════════════════════════════════════════════════════*/
 async function checkUpdates() {
   q('#updMsg').textContent = 'Checking…';
-  const info = await cbx.updGet();
+  const info = await __api.updGet();
   if (!info) { q('#updMsg').textContent = 'Could not check for updates.'; return; }
   if (info.updateAvailable) {
     q('#updMsg').textContent = `Version ${info.version} is available.`;
@@ -915,10 +915,10 @@ function setupUpdateButtons() {
   q('#updDownload').onclick = () => {
     q('#updDownload').disabled = true;
     q('#updBarWrap').classList.remove('hidden');
-    cbx.updDownload();
+    __api.updDownload();
   };
-  q('#updInstall').onclick = () => cbx.updInstall();
-  if (cbx.onUpdProgress) cbx.onUpdProgress((pct) => {
+  q('#updInstall').onclick = () => __api.updInstall();
+  if (__api.onUpdProgress) __api.onUpdProgress((pct) => {
     q('#updBar').style.width = pct + '%';
     if (pct >= 100) { q('#updInstall').classList.remove('hidden'); q('#updMsg').textContent = 'Ready to install.'; }
   });
@@ -934,7 +934,7 @@ async function checkSetup() {
     { name: 'Java JDK', cmd: 'javac', label: 'java' },
     { name: 'GCC (C/C++)', cmd: 'gcc', label: 'gcc' },
   ];
-  const info = await cbx.checkSetup() || {};
+  const info = await __api.checkSetup() || {};
   q('#setupRows').innerHTML = rows.map(r => {
     const st = info[r.cmd] || 'miss';
     return `<div class="setupRow">
@@ -947,7 +947,7 @@ async function checkSetup() {
 }
 window.installTool = async function(label) {
   appendLog(`Installing ${label}…`);
-  const ok = await cbx.installTool(label);
+  const ok = await __api.installTool(label);
   if (ok) { toast('Installed!'); checkSetup(); } else toast('Install failed — open a terminal and run winget manually', true);
 };
 
@@ -958,17 +958,17 @@ async function pyInstall() {
   const name = q('#pyName').value.trim();
   if (!name) return;
   appendLog(`pip install ${name}`);
-  const ok = await cbx.pipInstall(name);
+  const ok = await __api.pipInstall(name);
   if (ok) toast('Installed: ' + name); else toast('Install failed', true);
 }
 async function pyRemove() {
   const name = q('#pyName').value.trim();
   if (!name) return;
-  const ok = await cbx.pipRemove(name);
+  const ok = await __api.pipRemove(name);
   if (ok) toast('Removed: ' + name); else toast('Failed', true);
 }
 async function pyList() {
-  const list = await cbx.pipList();
+  const list = await __api.pipList();
   appendLog(list || '(empty)');
 }
 
@@ -1028,7 +1028,7 @@ function showNewMenu(anchor) {
 }
 function hideNewMenu() { q('#newMenu').classList.add('hidden'); }
 async function openFilePicker() {
-  const fp = await cbx.openFile();
+  const fp = await __api.openFile();
   if (fp) openFile(fp);
 }
 
@@ -1092,13 +1092,13 @@ function wire() {
   q('#btnSave').onclick   = () => saveFile();
   q('#btnQuickOpen').onclick = () => showQuickOpen();
   q('#btnRun').onclick    = () => runCode();
-  q('#btnStop').onclick   = () => cbx.stopRun();
+  q('#btnStop').onclick   = () => __api.stopRun();
   q('#btnZen').onclick    = () => toggleZen();
   q('#btnPkg').onclick    = () => showOverlay('python');
   q('#btnSetup').onclick  = () => showOverlay('setup');
   q('#btnSettings').onclick = () => showOverlay('settings');
   q('#btnUpdate').onclick   = () => showOverlay('update');
-  q('#btnHelp').onclick     = () => cbx.openExternal('https://claude.ai/artifact/Eq1gVrsppJFZjizS3icH2r');
+  q('#btnHelp').onclick     = () => __api.openExternal('https://claude.ai/artifact/Eq1gVrsppJFZjizS3icH2r');
 
   /* ── Welcome screen ── */
   q('#wNewFile').onclick    = () => newFile();
@@ -1122,7 +1122,7 @@ function wire() {
     const name = await askUser('New file name', 'main.py');
     if (!name) return;
     const fp = ws + '/' + name;
-    await cbx.writeFile(fp, '');
+    await __api.writeFile(fp, '');
     await refreshTree();
     openFile(fp);
   };
@@ -1151,7 +1151,7 @@ function wire() {
   q('#tabTerminal').onclick = () => switchPanelTab('terminal');
   q('#tabProblems').onclick = () => switchPanelTab('problems');
   q('#termClear').onclick   = () => { terminalObj.clear(); q('#problemsPane').dataset.lastText = ''; };
-  q('#termRestart').onclick = () => { cbx.restartTerm(); toast('Terminal restarted'); };
+  q('#termRestart').onclick = () => { __api.restartTerm(); toast('Terminal restarted'); };
   q('#termToggle').onclick  = () => {
     const pane = q('#panel');
     const small = pane.style.height === MIN_SPLIT + 'px';
@@ -1202,7 +1202,7 @@ function wire() {
   q('#setAuto').onchange = e => { settings.autoSave = e.target.checked; saveSettings(); };
   q('#setUpd').onchange  = e => { settings.updCheck = e.target.checked; saveSettings(); };
   q('#setFmtSave').onchange = e => { settings.formatOnSave = e.target.checked; saveSettings(); };
-  q('#setOpenWs').onclick = () => { if (ws) cbx.showInExplorer(ws); };
+  q('#setOpenWs').onclick = () => { if (ws) __api.showInExplorer(ws); };
 
   /* ── Overlay nav ── */
   q('#dlgNav').querySelectorAll('[data-pane]').forEach(b => {
@@ -1216,8 +1216,8 @@ function wire() {
   q('#pyRemove').onclick  = () => pyRemove();
   q('#pyList').onclick    = () => pyList();
   q('#pyReq').onclick     = async () => {
-    const fp = await cbx.openFile();
-    if (fp) { appendLog('pip install -r ' + fp); await cbx.pipReq(fp); }
+    const fp = await __api.openFile();
+    if (fp) { appendLog('pip install -r ' + fp); await __api.pipReq(fp); }
   };
   q('#logClear').onclick = () => { q('#log').textContent = ''; };
 
